@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - "1.65"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust ${{ matrix.toolchain }}
+        run: |
+          rustup toolchain install ${{ matrix.toolchain }} --component rustfmt,clippy --target wasm32-unknown-unknown
+          rustup default ${{ matrix.toolchain }}
+
+      - name: Check rustfmt
+        run:
+          cargo fmt --all -- --check
+
+      - name: Check
+        run: |
+          cargo check --release
+
+      - name: Test
+        run: |
+          cargo test --release
+
+      - run: cargo install cargo-all-features
+
+      - name: Check all features
+        run: |
+          cargo check-all-features --target wasm32-unknown-unknown
