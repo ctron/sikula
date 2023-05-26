@@ -1,0 +1,25 @@
+[package]
+name = "sikula"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+description = "A simple query language"
+repository = "https://github.com/ctron/sikula"
+categories = ["parser-implementations", "parsing", "text-processing"]
+keywords = ["query", "language", "parser"]
+readme = "README.md"
+rust-version = "1.65"
+
+[dependencies]
+chumsky = "1.0.0-alpha.4"
+thiserror = "1"
+
+time = { version = "0.3", optional = true, features = ["parsing"] }
+
+[dev-dependencies]
+time = { version = "0.3", features = ["parsing"] }
+
+[[test]]
+name = "manual"
+required-features = ["time"]
