@@ -70,5 +70,6 @@ Now, you can do the following queries:
 
 ## ToDo
 
-* [ ] Implement the derive (waiting to stabilize the API)
+* [x] Implement the derive (waiting to stabilize the API)
 * [ ] Re-consider `AND`, `OR`, `NOT`, and groups
+* [ ] Re-export chumsky 

@@ -17,9 +17,15 @@ thiserror = "1"
 
 time = { version = "0.3", optional = true, features = ["parsing"] }
 
+sikula-macros = { version = "0.1.0", path = "sikula-macros" }
+
 [dev-dependencies]
 time = { version = "0.3", features = ["parsing"] }
 
 [[test]]
 name = "manual"
+required-features = ["time"]
+
+[[test]]
+name = "derive"
 required-features = ["time"]

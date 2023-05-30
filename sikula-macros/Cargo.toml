@@ -1,0 +1,21 @@
+[package]
+name = "sikula-macros"
+description = "Macro support for sikula"
+version = "0.1.1"
+edition = "2021"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/ctron/sikula"
+categories = ["parser-implementations", "parsing", "text-processing"]
+keywords = ["query", "language", "parser"]
+readme = "../README.md"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
+darling = "0.20.1"
+convert_case = "0.6.0"
