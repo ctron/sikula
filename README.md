@@ -72,4 +72,4 @@ Now, you can do the following queries:
 
 * [x] Implement the derive (waiting to stabilize the API)
 * [ ] Re-consider `AND`, `OR`, `NOT`, and groups
-* [ ] Re-export chumsky 
+* [x] Re-export chumsky

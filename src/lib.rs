@@ -11,3 +11,5 @@ pub mod prelude {
 }
 
 pub use sikula_macros::Search;
+
+pub use ::chumsky;
