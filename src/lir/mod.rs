@@ -45,13 +45,13 @@ where
         }
 
         Ok(if let Some(expression) = expression.strip_prefix(">=") {
-            Ordered::LessEqual(T::from_expression(context, qualifier, expression)?)
-        } else if let Some(expression) = expression.strip_prefix('>') {
-            Ordered::Less(T::from_expression(context, qualifier, expression)?)
-        } else if let Some(expression) = expression.strip_prefix("<=") {
             Ordered::GreaterEqual(T::from_expression(context, qualifier, expression)?)
+        } else if let Some(expression) = expression.strip_prefix('>') {
+            Ordered::LessEqual(T::from_expression(context, qualifier, expression)?)
+        } else if let Some(expression) = expression.strip_prefix("<=") {
+            Ordered::LessEqual(T::from_expression(context, qualifier, expression)?)
         } else if let Some(expression) = expression.strip_prefix('<') {
-            Ordered::Greater(T::from_expression(context, qualifier, expression)?)
+            Ordered::Less(T::from_expression(context, qualifier, expression)?)
         } else {
             match expression.split_once("..") {
                 Some(m) => {
@@ -74,6 +74,75 @@ where
                     Ordered::Range(from, to)
                 }
                 None => Ordered::Equal(T::from_expression(context, qualifier, expression)?),
+            }
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PartialOrdered<T: PartialOrd> {
+    Greater(T),
+    GreaterEqual(T),
+    Less(T),
+    LessEqual(T),
+    Range(Bound<T>, Bound<T>),
+}
+
+impl<T> PartialOrdered<T>
+where
+    T: PartialOrd + Clone,
+{
+    pub fn from_range<R>(range: R) -> Self
+    where
+        R: RangeBounds<T>,
+    {
+        PartialOrdered::Range(range.start_bound().cloned(), range.end_bound().cloned())
+    }
+}
+
+impl<'a, T> FromExpression<'a> for PartialOrdered<T>
+where
+    T: PartialOrd + FromExpression<'a>,
+{
+    fn from_expression(
+        context: QualifierContext,
+        qualifier: Qualifier<'a>,
+        expression: &'a str,
+    ) -> Result<Self, Error<'a>> {
+        if !qualifier.is_empty() {
+            return Err(Error::UnknownQualifier(qualifier));
+        }
+
+        Ok(if let Some(expression) = expression.strip_prefix(">=") {
+            PartialOrdered::GreaterEqual(T::from_expression(context, qualifier, expression)?)
+        } else if let Some(expression) = expression.strip_prefix('>') {
+            PartialOrdered::Greater(T::from_expression(context, qualifier, expression)?)
+        } else if let Some(expression) = expression.strip_prefix("<=") {
+            PartialOrdered::LessEqual(T::from_expression(context, qualifier, expression)?)
+        } else if let Some(expression) = expression.strip_prefix('<') {
+            PartialOrdered::Less(T::from_expression(context, qualifier, expression)?)
+        } else {
+            match expression.split_once("..") {
+                Some(m) => {
+                    let (from, to) = match m {
+                        ("*", "*") => (Bound::Unbounded, Bound::Unbounded),
+                        ("*", to) => (
+                            Bound::Unbounded,
+                            Bound::Excluded(T::from_expression(context, qualifier, to)?),
+                        ),
+                        (from, "*") => (
+                            Bound::Included(T::from_expression(context, qualifier.clone(), from)?),
+                            Bound::Unbounded,
+                        ),
+                        (from, to) => (
+                            Bound::Included(T::from_expression(context, qualifier.clone(), from)?),
+                            Bound::Excluded(T::from_expression(context, qualifier, to)?),
+                        ),
+                    };
+
+                    PartialOrdered::Range(from, to)
+                }
+                None => PartialOrdered::Range(Bound::Unbounded, Bound::Unbounded),
             }
         })
     }
