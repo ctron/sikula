@@ -36,74 +36,66 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(expanded)
 }
 
-fn expand_sortables(base: &Ident, sortables: &[Sortable]) -> TokenStream {
-    let sortable_variants = sortables.iter().map(|sortable| {
-        let ident = &sortable.ident;
-        quote! { #ident }
-    });
+fn expand_from_names<'a>(
+    name: Ident,
+    names: impl IntoIterator<Item = (&'a str, &'a Ident)>,
+) -> TokenStream {
+    let (variants, mappings): (Vec<_>, Vec<_>) = names
+        .into_iter()
+        .map(|(name, ident)| {
+            (
+                quote! { #ident },
+                quote! {
+                    [ #name ] => Self::#ident,
+                },
+            )
+        })
+        .unzip();
 
-    let sortable_mappings = sortables.iter().map(|sortable| {
-        let name = &sortable.name;
-        let ident = &sortable.ident;
-        quote! {
-            [ #name ] => Self::#ident,
-        }
-    });
-
-    let name = Ident::new(&format!("{}Sortable", base), base.span());
+    let body = match mappings.is_empty() {
+        true => quote! {},
+        false => quote! {
+            Ok(match qualifier.as_slice() {
+                #(#mappings)*
+                _ => return Err(()),
+            })
+        },
+    };
 
     quote! {
         #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
         pub enum #name {
-            #(#sortable_variants,)*
+            #(#variants,)*
         }
 
         impl sikula::prelude::FromQualifier for #name {
             type Err = ();
 
             fn from_qualifier(qualifier: &sikula::prelude::Qualifier) -> Result<Self, Self::Err> {
-                Ok(match qualifier.as_slice() {
-                    #(#sortable_mappings)*
-                    _ => return Err(()),
-                })
+                #body
             }
         }
     }
 }
 
+fn expand_sortables(base: &Ident, sortables: &[Sortable]) -> TokenStream {
+    let name = Ident::new(&format!("{}Sortable", base), base.span());
+    expand_from_names(
+        name,
+        sortables
+            .iter()
+            .map(|sortable| (sortable.name.as_str(), &sortable.ident)),
+    )
+}
+
 fn expand_scopes(base: &Ident, scopes: &[Scope]) -> TokenStream {
-    let scope_variants = scopes.iter().map(|scope| {
-        let ident = &scope.ident;
-        quote! { #ident }
-    });
-
-    let scope_mappings = scopes.iter().map(|scope| {
-        let name = &scope.name;
-        let ident = &scope.ident;
-        quote! {
-            [ #name ] => Self::#ident,
-        }
-    });
-
     let name = Ident::new(&format!("{}Scope", base), base.span());
-
-    quote! {
-        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-        pub enum #name {
-            #(#scope_variants,)*
-        }
-
-        impl sikula::prelude::FromQualifier for #name {
-            type Err = ();
-
-            fn from_qualifier(qualifier: &sikula::prelude::Qualifier) -> Result<Self, Self::Err> {
-                Ok(match qualifier.as_slice() {
-                    #(#scope_mappings)*
-                    _ => return Err(()),
-                })
-            }
-        }
-    }
+    expand_from_names(
+        name,
+        scopes
+            .iter()
+            .map(|scope| (scope.name.as_str(), &scope.ident)),
+    )
 }
 
 fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
