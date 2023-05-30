@@ -53,7 +53,9 @@ fn expand_from_names<'a>(
         .unzip();
 
     let body = match mappings.is_empty() {
-        true => quote! {},
+        true => quote! {
+            Err(())
+        },
         false => quote! {
             Ok(match qualifier.as_slice() {
                 #(#mappings)*
@@ -65,7 +67,7 @@ fn expand_from_names<'a>(
     quote! {
         #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
         pub enum #name {
-            #(#variants,)*
+            #(#variants, )*
         }
 
         impl sikula::prelude::FromQualifier for #name {
@@ -127,17 +129,41 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             ))
         }
     });
-    let match_primaries = info.scopes.iter().map(|scope| {
-        let ident = &scope.ident;
-        quote! {
-            Self::Scope::#ident => {
-                sikula::prelude::Term::Match(Self::#ident(expression.into_expression(
-                    sikula::prelude::QualifierContext::Primary,
-                    sikula::prelude::Qualifier::empty(),
-                )?))
+    let match_primaries = info
+        .scopes
+        .iter()
+        .map(|scope| {
+            let ident = &scope.ident;
+            quote! {
+                Self::Scope::#ident => {
+                    sikula::prelude::Term::Match(Self::#ident(expression.into_expression(
+                        sikula::prelude::QualifierContext::Primary,
+                        sikula::prelude::Qualifier::empty(),
+                    )?))
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let primaries = match match_primaries.is_empty() {
+        true => {
+            quote! {}
+        }
+        false => {
+            quote! {
+                [] => {
+                    let mut terms = vec![];
+                    for scope in &scopes {
+                        let expression = match scope {
+                            #(#match_primaries, )*
+                        };
+                        terms.push(expression);
+                    }
+                    sikula::prelude::Term::Or(terms)
+                },
             }
         }
-    });
+    };
 
     quote! {
         impl<'a> sikula::prelude::Resource<'a> for #ident <'a> {
@@ -149,7 +175,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
                 vec![ #(#default_scope, )* ]
             }
 
-            fn parse_query(q: &'a str) -> Result<Query<Self>, Error> {
+            fn parse_query(q: &'a str) -> Result<Query<Self>, sikula::lir::Error> {
                 use chumsky::Parser;
 
                 let query = sikula::mir::Query::parse(parser().parse(q).into_result().map_err(|s| {
@@ -183,17 +209,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
                             _ => return Err(sikula::lir::Error::UnknownPredicate(term.qualifier)),
                         },
                         sikula::mir::Expression::Simple(expression) => match term.qualifier.as_slice() {
-                            [] => {
-                                // primary
-                                let mut terms = vec![];
-                                for scope in &scopes {
-                                    let expression = match scope {
-                                        #(#match_primaries, )*
-                                    };
-                                    terms.push(expression);
-                                }
-                                sikula::prelude::Term::Or(terms)
-                            }
+                            #primaries
                             #(#match_qualifiers, )*
                             _ => return Err(sikula::lir::Error::UnknownQualifier(term.qualifier)),
                         },

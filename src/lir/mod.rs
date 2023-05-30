@@ -189,6 +189,8 @@ pub enum Error<'a> {
     UnknownSortQualifier(Qualifier<'a>),
     #[error("Unknown scope qualifier: {0}")]
     UnknownScopeQualifier(Qualifier<'a>),
+    #[error("Unsupported primary: {0}")]
+    UnsupportedPrimary(Qualifier<'a>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
