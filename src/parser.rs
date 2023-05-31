@@ -203,4 +203,17 @@ mod test {
             },
         )
     }
+
+    #[test]
+    fn test_date() {
+        assert_parse(
+            r#"date:2022-01-01"#,
+            Query {
+                terms: vec![Term {
+                    tokens: vec!["date", "2022-01-01"],
+                    invert: false,
+                }],
+            },
+        )
+    }
 }

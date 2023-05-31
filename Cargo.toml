@@ -15,12 +15,12 @@ rust-version = "1.65"
 chumsky = "1.0.0-alpha.4"
 thiserror = "1"
 
-time = { version = "0.3", optional = true, features = ["parsing"] }
+time = { version = "0.3", optional = true, features = ["parsing", "macros"] }
 
 sikula-macros = { version = "0.2.0", path = "sikula-macros" }
 
 [dev-dependencies]
-time = { version = "0.3", features = ["parsing"] }
+time = { version = "0.3", features = ["parsing", "macros"] }
 
 [[test]]
 name = "manual"

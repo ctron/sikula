@@ -47,7 +47,7 @@ where
         Ok(if let Some(expression) = expression.strip_prefix(">=") {
             Ordered::GreaterEqual(T::from_expression(context, qualifier, expression)?)
         } else if let Some(expression) = expression.strip_prefix('>') {
-            Ordered::LessEqual(T::from_expression(context, qualifier, expression)?)
+            Ordered::Greater(T::from_expression(context, qualifier, expression)?)
         } else if let Some(expression) = expression.strip_prefix("<=") {
             Ordered::LessEqual(T::from_expression(context, qualifier, expression)?)
         } else if let Some(expression) = expression.strip_prefix('<') {
