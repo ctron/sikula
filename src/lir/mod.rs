@@ -202,7 +202,7 @@ pub struct Sort<S> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Term<'a, R>
 where
-    R: Resource<'a>,
+    R: Search<'a>,
 {
     Match(R::Parsed),
     Not(Box<Term<'a, R>>),
@@ -212,7 +212,7 @@ where
 
 impl<'a, R> Term<'a, R>
 where
-    R: Resource<'a>,
+    R: Search<'a>,
 {
     pub fn compact(self) -> Self {
         match self {
@@ -225,7 +225,7 @@ where
 
 pub struct Query<'a, R>
 where
-    R: Resource<'a>,
+    R: Search<'a>,
 {
     pub term: Term<'a, R>,
     pub sorting: Vec<Sort<R::Sortable>>,
@@ -233,7 +233,7 @@ where
 
 impl<'a, R> Debug for Query<'a, R>
 where
-    R: Resource<'a> + Debug,
+    R: Search<'a> + Debug,
     R::Parsed: Debug,
     R::Sortable: Debug,
 {
@@ -247,7 +247,7 @@ where
 
 impl<'a, R> PartialEq for Query<'a, R>
 where
-    R: Resource<'a> + PartialEq,
+    R: Search<'a> + PartialEq,
     R::Parsed: PartialEq,
     R::Sortable: PartialEq,
 {
@@ -256,14 +256,14 @@ where
     }
 }
 
-pub trait Resource<'a>: Sized {
+pub trait Search<'a>: Sized {
     type Parsed;
     type Sortable: FromQualifier;
     type Scope: FromQualifier + Eq + Hash;
 
     fn default_scopes() -> Vec<Self::Scope>;
 
-    fn parse_query(q: &'a str) -> Result<Query<Self>, Error>;
+    fn parse(q: &'a str) -> Result<Query<Self>, Error>;
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

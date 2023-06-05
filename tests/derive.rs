@@ -63,7 +63,7 @@ enum ExampleResource<'a> {
 
 #[test]
 fn test() {
-    let r = DeriveResource::parse_query(r#"is:read message:bar -subject:foo"#).unwrap();
+    let r = DeriveResource::parse(r#"is:read message:bar -subject:foo"#).unwrap();
 
     assert_eq!(
         Query {
@@ -82,7 +82,7 @@ fn test() {
 
 #[test]
 fn test_scopes() {
-    let r = DeriveResource::parse_query(r#"is:read bar foo in:subject in:message"#).unwrap();
+    let r = DeriveResource::parse(r#"is:read bar foo in:subject in:message"#).unwrap();
 
     assert_eq!(
         Query {
@@ -104,7 +104,7 @@ fn test_scopes() {
 }
 
 fn assert_query<'a>(q: &'a str, expected: Query<'a, DeriveResource<'a>>) {
-    let r = DeriveResource::parse_query(q).unwrap();
+    let r = DeriveResource::parse(q).unwrap();
     assert_eq!(expected, r)
 }
 

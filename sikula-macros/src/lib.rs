@@ -166,7 +166,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
     };
 
     quote! {
-        impl<'a> sikula::prelude::Resource<'a> for #ident <'a> {
+        impl<'a> sikula::prelude::Search<'a> for #ident <'a> {
             type Parsed = #ident<'a>;
             type Sortable = #ident_sortable;
             type Scope = #ident_scope;
@@ -175,7 +175,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
                 vec![ #(#default_scope, )* ]
             }
 
-            fn parse_query(q: &'a str) -> Result<Query<Self>, sikula::lir::Error> {
+            fn parse(q: &'a str) -> Result<Query<Self>, sikula::lir::Error> {
                 use chumsky::Parser;
 
                 let query = sikula::mir::Query::parse(parser().parse(q).into_result().map_err(|s| {

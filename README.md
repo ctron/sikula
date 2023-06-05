@@ -1,5 +1,10 @@
 # SiKuLa
 
+[![CI](https://github.com/ctron/sikula/workflows/CI/badge.svg)](https://github.com/ctron/sikula/actions?query=workflow%3A%22CI%22)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/tag/ctron/sikula?sort=semver)](https://github.com/ctron/sikula/releases)
+[![crates.io](https://img.shields.io/crates/v/sikula.svg)](https://crates.io/crates/sikula)
+[![docs.rs](https://docs.rs/sikula/badge.svg)](https://docs.rs/sikula)
+
 <u>Si</u>mple <u>Qu</u>ery <u>La</u>nguage - [ˈziːˈkuːˈlaː]
 
 ## Rationale
@@ -20,26 +25,28 @@ They are subtle. But I don't want to spoil the surprise. Or maybe I am just too 
 Assuming you have an enum defined for searching e-mails:
 
 ```rust
-#[derive(Query)]
+use sikula::prelude::*;
+
+#[derive(Search)]
 pub enum MyResource<'a> {
-    #[query(scope, default)]
-    Subject(Primary<'a>),
-    #[query(scope)]
-    Body(Primary<'a>),
+     #[search(scope, default)]
+     Subject(Primary<'a>),
+     #[search(scope)]
+     Body(Primary<'a>),
 
-    Sender(&'a str),
-    
-    #[query(sort)]
-    Sent(Ordered<time::OffsetDateTime>),
-    #[query(sort)]
-    Size(Ordered<sized>),
+     Sender(&'a str),
 
-    #[query(sort)]
-    Header(Qualified<'a, &'a str>),
-    
-    Read,
-    Important,
-}
+     #[search(sort)]
+     Sent(Ordered<time::OffsetDateTime>),
+     #[search(sort)]
+     Size(Ordered<usize>),
+
+     #[search(sort)]
+     Header(Qualified<'a, &'a str>),
+
+     Read,
+     Important,
+ }
 ```
 
 The `Query` derive provides the trait implementation. The `#[query(scope)]` attribute flags the variant `Subject`

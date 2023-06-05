@@ -49,6 +49,7 @@ pub fn term<'a>() -> impl Parser<'a, &'a str, Term<'a>, extra::Err<Simple<'a, ch
         })
 }
 
+/// Create a new parser for parsing a query.
 pub fn parser<'a>() -> impl Parser<'a, &'a str, Query<'a>, extra::Err<Simple<'a, char>>> {
     term()
         .padded()

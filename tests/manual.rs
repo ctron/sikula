@@ -66,7 +66,7 @@ impl FromQualifier for ManualResourceScope {
     }
 }
 
-impl<'a> Resource<'a> for ManualResource<'a> {
+impl<'a> Search<'a> for ManualResource<'a> {
     type Parsed = ManualResource<'a>;
     type Sortable = ManualResourceSortable;
     type Scope = ManualResourceScope;
@@ -75,7 +75,7 @@ impl<'a> Resource<'a> for ManualResource<'a> {
         vec![Self::Scope::Subject]
     }
 
-    fn parse_query(q: &'a str) -> Result<Query<Self>, Error> {
+    fn parse(q: &'a str) -> Result<Query<Self>, Error> {
         use chumsky::Parser;
 
         let query = mir::Query::parse(parser().parse(q).into_result().map_err(|s| {
@@ -208,7 +208,7 @@ enum ExampleResource<'a> {
 
 #[test]
 fn test() {
-    let r = ManualResource::parse_query(r#"is:read message:bar -subject:foo"#).unwrap();
+    let r = ManualResource::parse(r#"is:read message:bar -subject:foo"#).unwrap();
 
     assert_eq!(
         Query {
@@ -227,7 +227,7 @@ fn test() {
 
 #[test]
 fn test_scopes() {
-    let r = ManualResource::parse_query(r#"is:read bar foo in:subject in:message"#).unwrap();
+    let r = ManualResource::parse(r#"is:read bar foo in:subject in:message"#).unwrap();
 
     assert_eq!(
         Query {
@@ -249,7 +249,7 @@ fn test_scopes() {
 }
 
 fn assert_query<'a>(q: &'a str, expected: Query<'a, ManualResource<'a>>) {
-    let r = ManualResource::parse_query(q).unwrap();
+    let r = ManualResource::parse(q).unwrap();
     assert_eq!(expected, r)
 }
 
