@@ -1,6 +1,6 @@
 [package]
 name = "sikula"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
@@ -17,7 +17,7 @@ thiserror = "1"
 
 time = { version = "0.3", optional = true, features = ["parsing", "macros"] }
 
-sikula-macros = { version = "0.3.0", path = "sikula-macros" }
+sikula-macros = { version = "0.3.1", path = "sikula-macros" }
 
 [dev-dependencies]
 time = { version = "0.3", features = ["parsing", "macros"] }
