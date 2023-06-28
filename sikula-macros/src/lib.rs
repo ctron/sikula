@@ -176,7 +176,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             }
 
             fn parse(q: &'a str) -> Result<Query<Self>, sikula::lir::Error> {
-                use chumsky::Parser;
+                use sikula::chumsky::Parser;
 
                 let query = sikula::mir::Query::parse(parser().parse(q).into_result().map_err(|s| {
                     sikula::lir::Error::Parser(
