@@ -75,26 +75,74 @@ pub enum Expression<'a> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Term<'a> {
-    pub qualifier: Qualifier<'a>,
-    pub invert: bool,
-    pub expression: Expression<'a>,
+pub enum Term<'a> {
+    Match {
+        qualifier: Qualifier<'a>,
+        expression: Expression<'a>,
+    },
+    Not(Box<Term<'a>>),
+    And {
+        scopes: Vec<Qualifier<'a>>,
+        terms: Vec<Term<'a>>,
+    },
+    Or {
+        scopes: Vec<Qualifier<'a>>,
+        terms: Vec<Term<'a>>,
+    },
 }
 
 impl<'a> Term<'a> {
+    /*
     pub fn primary(value: &'a str) -> Self {
         Self {
             qualifier: Qualifier::empty(),
             invert: false,
             expression: Expression::Simple(value),
         }
+    }*/
+
+    pub fn primary(value: &'a str) -> Self {
+        Self::Match {
+            qualifier: Qualifier::empty(),
+            expression: Expression::Simple(value),
+        }
+    }
+
+    pub fn compact(self) -> Self {
+        match self {
+            // if "or" has only one element an no scopes, return the single term
+            Self::Or { scopes, mut terms } if scopes.is_empty() && terms.len() == 1 => {
+                terms.remove(0)
+            }
+            // if "and" has only one element an no scopes, return the single term
+            Self::And { scopes, mut terms } if scopes.is_empty() && terms.len() == 1 => {
+                terms.remove(0)
+            }
+            otherwise => otherwise,
+        }
+    }
+
+    pub fn negate(self) -> Self {
+        match self {
+            // if we are already applying "not", then negating just means removing that not
+            Self::Not(term) => *term,
+            // otherwise, wrap with a not
+            otherwise => Self::Not(Box::new(otherwise)),
+        }
+    }
+
+    fn apply_invert(self, invert: bool) -> Self {
+        if invert {
+            self.negate()
+        } else {
+            self
+        }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Query<'a> {
-    pub terms: Vec<Term<'a>>,
-    pub scope: Vec<Qualifier<'a>>,
+    pub term: Term<'a>,
     pub sorting: Vec<Sort<'a>>,
 }
 
@@ -103,11 +151,95 @@ pub enum Error {}
 
 impl<'a> Query<'a> {
     pub fn parse(query: hir::Query<'a>) -> Result<Self, Error> {
-        let mut terms = Vec::new();
-        let mut scope = Vec::new();
         let mut sorting = Vec::new();
 
-        for term in query.terms {
+        // the root, defaults to "and"
+        let mut scopes = vec![];
+        let terms = Self::parse_term(&mut sorting, &mut scopes, &query.term);
+
+        Ok(Self {
+            term: Term::And { terms, scopes }.compact(),
+            sorting,
+        })
+    }
+
+    fn parse_term(
+        sorting: &mut Vec<Sort<'a>>,
+        scopes: &mut Vec<Qualifier<'a>>,
+        term: &hir::Term<'a>,
+    ) -> Vec<Term<'a>> {
+        match term {
+            hir::Term::Not(term) => Self::parse_term(sorting, scopes, &term)
+                .into_iter()
+                .map(|term| Term::Not(Box::new(term)))
+                .collect(),
+            hir::Term::And(terms) => {
+                let mut scopes = vec![];
+                let terms = terms
+                    .iter()
+                    .flat_map(|term| Self::parse_term(sorting, &mut scopes, term))
+                    .collect();
+                vec![Term::And { scopes, terms }.compact()]
+            }
+            hir::Term::Or(terms) => {
+                let mut scopes = vec![];
+                let terms = terms
+                    .iter()
+                    .flat_map(|term| Self::parse_term(sorting, &mut scopes, term))
+                    .collect();
+                vec![Term::Or { scopes, terms }.compact()]
+            }
+            hir::Term::Match { invert, tokens } => {
+                Self::parse_match(*invert, tokens, sorting, scopes)
+            }
+        }
+    }
+
+    fn parse_match(
+        invert: bool,
+        terms: &Vec<&'a str>,
+        sorting: &mut Vec<Sort<'a>>,
+        scopes: &mut Vec<Qualifier<'a>>,
+    ) -> Vec<Term<'a>> {
+        match terms.as_slice() {
+            [] => {
+                // should not happen, skip
+                vec![]
+            }
+            ["in", qualifier @ ..] => {
+                scopes.push(qualifier.into());
+                vec![]
+            }
+            ["is", qualifier @ ..] => vec![Term::Match {
+                qualifier: qualifier.into(),
+                expression: Expression::Predicate,
+            }
+            .apply_invert(invert)],
+            ["sort", qualifier @ ..] => {
+                sorting.push(Sort {
+                    qualifier: qualifier.into(),
+                    direction: match invert {
+                        false => Direction::Ascending,
+                        true => Direction::Descending,
+                    },
+                });
+                vec![]
+            }
+            [primary] => vec![Term::primary(primary).apply_invert(invert)],
+            [qualifier @ .., value] => vec![Term::Match {
+                qualifier: qualifier.into(),
+                expression: Expression::Simple(value),
+            }
+            .apply_invert(invert)],
+        }
+    }
+
+    /*
+    pub fn parseX(query: hir::Query<'a>) -> Result<Self, Error> {
+        let mut terms = Vec::new();
+        let mut sorting = Vec::new();
+
+        for term in query.term {
             match term.tokens.as_slice() {
                 [] => {
                     // should not happen, skip
@@ -141,7 +273,7 @@ impl<'a> Query<'a> {
             scope,
             sorting,
         })
-    }
+    }*/
 }
 
 #[cfg(test)]
@@ -161,24 +293,24 @@ mod test {
 
         assert_eq!(
             Query {
-                terms: vec![
-                    Term {
-                        qualifier: ["predicate"].into(),
-                        invert: false,
-                        expression: Expression::Predicate,
-                    },
-                    Term {
-                        qualifier: [].into(),
-                        invert: false,
-                        expression: Expression::Simple("primary"),
-                    },
-                    Term {
-                        qualifier: ["qualifier"].into(),
-                        invert: true,
-                        expression: Expression::Simple("foo")
-                    }
-                ],
-                scope: vec![["scope"].into()],
+                term: Term::And {
+                    terms: vec![
+                        Term::Match {
+                            qualifier: ["predicate"].into(),
+                            expression: Expression::Predicate,
+                        },
+                        Term::Match {
+                            qualifier: Qualifier::default(),
+                            expression: Expression::Simple("primary"),
+                        },
+                        Term::Not(Box::new(Term::Match {
+                            qualifier: ["qualifier"].into(),
+                            expression: Expression::Simple("foo")
+                        }))
+                    ],
+                    scopes: vec![["scope"].into()]
+                },
+
                 sorting: vec![Sort {
                     qualifier: ["something"].into(),
                     direction: Direction::Ascending,
@@ -194,8 +326,10 @@ mod test {
 
         assert_eq!(
             Query {
-                terms: vec![],
-                scope: vec![["a"].into(), ["b"].into(), ["c"].into()],
+                term: Term::And {
+                    terms: vec![],
+                    scopes: vec![["a"].into(), ["b"].into(), ["c"].into()],
+                },
                 sorting: vec![],
             },
             result
@@ -208,8 +342,10 @@ mod test {
 
         assert_eq!(
             Query {
-                terms: vec![],
-                scope: vec![],
+                term: Term::And {
+                    scopes: vec![],
+                    terms: vec![]
+                },
                 sorting: vec![
                     Sort {
                         qualifier: ["foo"].into(),
@@ -231,8 +367,10 @@ mod test {
 
         assert_eq!(
             Query {
-                terms: vec![Term::primary("foo"), Term::primary("bar, baz"),],
-                scope: vec![],
+                term: Term::And {
+                    scopes: vec![],
+                    terms: vec![Term::primary("foo"), Term::primary("bar, baz")]
+                },
                 sorting: vec![],
             },
             result

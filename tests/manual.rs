@@ -1,7 +1,4 @@
-use sikula::{
-    mir::{self, Expression, Qualifier},
-    prelude::*,
-};
+use sikula::{mir, prelude::*};
 
 /// same as [`ExampleResource`], but manually implemented
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -75,17 +72,67 @@ impl<'a> Search<'a> for ManualResource<'a> {
         vec![Self::Scope::Subject]
     }
 
-    fn parse(q: &'a str) -> Result<Query<Self>, Error> {
-        use chumsky::Parser;
+    fn translate_match(
+        context: &Context<'a, '_, Self>,
+        qualifier: mir::Qualifier<'a>,
+        expression: mir::Expression<'a>,
+    ) -> Result<Term<'a, ManualResource<'a>>, Error<'a>> {
+        let term = match expression {
+            mir::Expression::Predicate => match qualifier.as_slice() {
+                ["read"] => Term::Match(Self::Read),
+                _ => return Err(Error::UnknownPredicate(qualifier)),
+            },
+            mir::Expression::Simple(expression) => match qualifier.as_slice() {
+                [] => {
+                    // primary
+                    let mut terms = vec![];
+                    for scope in context.aggregated_scopes() {
+                        let expression = match scope {
+                            ManualResourceScope::Subject => {
+                                Term::Match(Self::Subject(expression.into_expression(
+                                    QualifierContext::Primary,
+                                    Qualifier::empty(),
+                                )?))
+                            }
+                            ManualResourceScope::Message => {
+                                Term::Match(Self::Message(expression.into_expression(
+                                    QualifierContext::Primary,
+                                    Qualifier::empty(),
+                                )?))
+                            }
+                        };
+                        terms.push(expression);
+                    }
+                    Term::Or(terms)
+                }
+                ["message", n @ ..] => Term::Match(Self::Message(
+                    expression.into_expression(QualifierContext::Qualifier, n.into())?,
+                )),
+                ["subject", n @ ..] => Term::Match(Self::Subject(
+                    expression.into_expression(QualifierContext::Qualifier, n.into())?,
+                )),
+                ["author", n @ ..] => Term::Match(Self::Author(
+                    expression.into_expression(QualifierContext::Qualifier, n.into())?,
+                )),
+                ["sent", n @ ..] => Term::Match(Self::Sent(
+                    expression.into_expression(QualifierContext::Qualifier, n.into())?,
+                )),
+                ["size", n @ ..] => Term::Match(Self::Size(
+                    expression.into_expression(QualifierContext::Qualifier, n.into())?,
+                )),
+                ["label", n @ ..] => Term::Match(Self::Label(
+                    expression.into_expression(QualifierContext::Qualifier, n.into())?,
+                )),
+                _ => return Err(Error::UnknownQualifier(qualifier)),
+            },
+        };
 
-        let query = mir::Query::parse(parser().parse(q).into_result().map_err(|s| {
-            Error::Parser(
-                s.into_iter()
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-            )
-        })?)?;
+        Ok(term)
+    }
+
+    /*
+    fn parse(q: &'a str) -> Result<Query<Self>, Error> {
+        let query = parse_query(q)?;
 
         let scopes = if query.scope.is_empty() {
             Self::default_scopes()
@@ -160,21 +207,13 @@ impl<'a> Search<'a> for ManualResource<'a> {
             terms.push(term);
         }
 
-        let mut sorting = vec![];
-        for sort in query.sorting {
-            sorting.push(Sort {
-                qualifier: Self::Sortable::from_qualifier(&sort.qualifier)
-                    .map_err(|()| Error::UnknownSortQualifier(sort.qualifier))?,
-                direction: sort.direction,
-            })
-        }
-
         Ok(Query {
             term: Term::And(terms).compact(),
-            sorting,
+            sorting: translate_sorting(query.sorting)?,
         })
-    }
+    }*/
 }
+
 /*
 #[derive(Resource)]
 enum ExampleResource<'a> {
