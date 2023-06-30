@@ -120,6 +120,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             [#value] => Term::Match(Self::#ident)
         }
     });
+
     let match_qualifiers = info.qualifiers.iter().map(|qualifier| {
         let value = &qualifier.name;
         let ident = &qualifier.ident;
@@ -129,6 +130,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             ))
         }
     });
+
     let match_primaries = info
         .scopes
         .iter()
@@ -153,13 +155,13 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             quote! {
                 [] => {
                     let mut terms = vec![];
-                    for scope in &scopes {
+                    for scope in context.aggregated_scopes() {
                         let expression = match scope {
                             #(#match_primaries, )*
                         };
                         terms.push(expression);
                     }
-                    sikula::prelude::Term::Or(terms)
+                    sikula::prelude::Term::Or(terms).compact()
                 },
             }
         }
@@ -175,66 +177,24 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
                 vec![ #(#default_scope, )* ]
             }
 
-            fn parse(q: &'a str) -> Result<Query<Self>, sikula::lir::Error> {
-                use sikula::chumsky::Parser;
+            fn translate_match(
+                context: &sikula::lir::Context<'a, '_, Self>,
+                qualifier: sikula::mir::Qualifier<'a>,
+                expression: sikula::mir::Expression<'a>,
+            ) -> Result<sikula::lir::Term<'a, Self>, Error<'a>> {
 
-                let query = sikula::mir::Query::parse(parser().parse(q).into_result().map_err(|s| {
-                    sikula::lir::Error::Parser(
-                        s.into_iter()
-                            .map(|s| s.to_string())
-                            .collect::<Vec<_>>()
-                            .join("\n"),
-                    )
-                })?)?;
-
-                let scopes = if query.scope.is_empty() {
-                    Self::default_scopes()
-                } else {
-                    let mut scopes = Vec::with_capacity(query.scope.len());
-                    for qualifier in query.scope {
-                        scopes.push(
-                            Self::Scope::from_qualifier(&qualifier)
-                                .map_err(|()| sikula::lir::Error::UnknownScopeQualifier(qualifier))?,
-                        );
-                    }
-                    scopes
-                };
-
-                let mut terms = vec![];
-                for term in query.terms {
-                    let invert = term.invert;
-                    let mut term = match term.expression {
-                        sikula::mir::Expression::Predicate => match term.qualifier.as_slice() {
-                            #(#match_predicates, )*
-                            _ => return Err(sikula::lir::Error::UnknownPredicate(term.qualifier)),
-                        },
-                        sikula::mir::Expression::Simple(expression) => match term.qualifier.as_slice() {
-                            #primaries
-                            #(#match_qualifiers, )*
-                            _ => return Err(sikula::lir::Error::UnknownQualifier(term.qualifier)),
-                        },
-                    };
-
-                    if invert {
-                        term = sikula::prelude::Term::Not(Box::new(term));
-                    }
-
-                    terms.push(term);
-                }
-
-                let mut sorting = vec![];
-                for sort in query.sorting {
-                    sorting.push(Sort {
-                        qualifier: Self::Sortable::from_qualifier(&sort.qualifier)
-                            .map_err(|()| sikula::lir::Error::UnknownSortQualifier(sort.qualifier))?,
-                        direction: sort.direction,
-                    })
-                }
-
-                Ok(Query {
-                    term: sikula::prelude::Term::And(terms).compact(),
-                    sorting,
+                Ok(match expression {
+                    sikula::mir::Expression::Predicate => match qualifier.as_slice() {
+                        #(#match_predicates, )*
+                        _ => return Err(sikula::lir::Error::UnknownPredicate(qualifier)),
+                    },
+                    sikula::mir::Expression::Simple(expression) => match qualifier.as_slice() {
+                        #primaries
+                        #(#match_qualifiers, )*
+                        _ => return Err(sikula::lir::Error::UnknownQualifier(qualifier)),
+                    },
                 })
+
             }
         }
     }

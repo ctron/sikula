@@ -1,61 +1,124 @@
 use crate::hir::{Query, Term};
 use chumsky::prelude::*;
 
-pub fn ident<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> {
+pub fn ident<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
     any()
         .filter(|c: &char| c.is_alphanumeric())
         .repeated()
         .at_least(1)
-        .map_slice(|s| s)
+        .map_slice(|s: &'a str| s)
 }
 
-pub fn quoted_string<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> {
+pub fn quoted_string<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone
+{
     just('"')
         .ignore_then(none_of('"').repeated().slice())
         .then_ignore(just('"'))
 }
 
-pub fn expression_string<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> {
+pub fn expression_string<'a>(
+) -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
     any()
-        .filter(|c: &char| !(c.is_whitespace() || c.is_control() || c == &'"'))
+        .filter(|c: &char| {
+            c.is_alphanumeric()
+                || match *c {
+                    // comparison
+                    '<' | '>' | '=' => true,
+                    // range
+                    '.' | '*' => true,
+                    // date
+                    '-' => true,
+                    _ => false,
+                }
+        })
         .repeated()
         .at_least(1)
         .map_slice(|s| s)
+        // filter out keywords in non-escaped values
+        .filter(|ident| match *ident {
+            "OR" | "AND" | "NOT" => false,
+            _ => true,
+        })
 }
 
-pub fn value<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> {
+pub fn value<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
     quoted_string().or(expression_string())
 }
 
-pub fn term<'a>() -> impl Parser<'a, &'a str, Term<'a>, extra::Err<Simple<'a, char>>> {
-    just('-')
-        .repeated()
-        .at_most(1)
-        .count()
+pub fn values<'a>() -> impl Parser<'a, &'a str, Vec<&'a str>, extra::Err<Simple<'a, char>>> + Clone
+{
+    value()
+        .separated_by(just(','))
+        .at_least(1)
+        .allow_leading()
+        .allow_trailing()
+        .collect()
+}
+
+pub fn term_match<'a>() -> impl Parser<'a, &'a str, Term<'a>, extra::Err<Simple<'a, char>>> + Clone
+{
+    let invert = just('-').repeated().at_most(1).count();
+
+    invert
         .then(
             ident()
                 .then_ignore(just(':'))
                 .repeated()
                 .collect::<Vec<_>>()
-                .then(value())
-                .map(|(mut tokens, value)| {
-                    tokens.push(value);
-                    tokens
-                }),
+                .then(values()),
         )
-        .map(|(invert, tokens)| Term {
-            invert: invert > 0,
-            tokens,
+        .map(|(invert, (tokens, values))| {
+            // check inversion
+            let invert = invert > 0;
+
+            // expand multi value case
+            let terms = values.into_iter().map(|value| {
+                // take base tokens and add value
+                let tokens = tokens.iter().map(|token| *token).chain([value]).collect();
+                Term::Match { invert, tokens }
+            });
+
+            // multi value as "or" (or single)
+            Term::or(terms)
         })
 }
 
 /// Create a new parser for parsing a query.
 pub fn parser<'a>() -> impl Parser<'a, &'a str, Query<'a>, extra::Err<Simple<'a, char>>> {
-    term()
-        .padded()
-        .repeated()
-        .collect()
-        .map(|terms| Query { terms })
+    recursive(|expr| {
+        let term = term_match();
+
+        let op = |c| just(c).padded();
+
+        let atom = term
+            .or(expr.clone().delimited_by(just('('), just(')')))
+            .padded();
+
+        let not = op("NOT")
+            .repeated()
+            .foldr(atom, |_op, rhs| Term::Not(Box::new(rhs)));
+
+        let and = not
+            .clone()
+            .foldl(op("AND").ignore_then(not.clone()).repeated(), |lhs, rhs| {
+                Term::binary(Term::And, lhs, rhs)
+            });
+
+        let or = and
+            .clone()
+            .foldl(op("OR").ignore_then(and).repeated(), |lhs, rhs| {
+                Term::binary(Term::Or, lhs, rhs)
+            });
+
+        or.repeated()
+            .collect::<Vec<_>>()
+            .map(|terms| Term::and(terms))
+    })
+    .padded()
+    .map(|term| Query {
+        // turn into a query, compacting the tree
+        term: term.compact(),
+    })
 }
 
 #[cfg(test)]
@@ -74,7 +137,12 @@ mod test {
 
     #[test]
     fn test_empty() {
-        assert_parse("", Query { terms: vec![] })
+        assert_parse(
+            "",
+            Query {
+                term: Term::And(vec![]),
+            },
+        )
     }
 
     #[test]
@@ -82,10 +150,10 @@ mod test {
         assert_parse(
             "is:predicate",
             Query {
-                terms: vec![Term {
-                    tokens: vec!["is", "predicate"],
+                term: Term::Match {
                     invert: false,
-                }],
+                    tokens: vec!["is", "predicate"],
+                },
             },
         )
     }
@@ -95,16 +163,16 @@ mod test {
         assert_parse(
             "is:predicate foo:bar",
             Query {
-                terms: vec![
-                    Term {
+                term: Term::And(vec![
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["is", "predicate"],
-                        invert: false,
                     },
-                    Term {
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["foo", "bar"],
-                        invert: false,
                     },
-                ],
+                ]),
             },
         )
     }
@@ -114,20 +182,39 @@ mod test {
         assert_parse(
             "foo is:predicate bar",
             Query {
-                terms: vec![
-                    Term {
+                term: Term::And(vec![
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["foo"],
-                        invert: false,
                     },
-                    Term {
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["is", "predicate"],
-                        invert: false,
                     },
-                    Term {
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["bar"],
-                        invert: false,
                     },
-                ],
+                ]),
+            },
+        )
+    }
+
+    #[test]
+    fn test_with_primaries() {
+        assert_parse(
+            "foo bar",
+            Query {
+                term: Term::And(vec![
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo"],
+                    },
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["bar"],
+                    },
+                ]),
             },
         )
     }
@@ -137,20 +224,20 @@ mod test {
         assert_parse(
             r#"foo:"is bar" is:predicate bar"#,
             Query {
-                terms: vec![
-                    Term {
+                term: Term::And(vec![
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["foo", "is bar"],
-                        invert: false,
                     },
-                    Term {
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["is", "predicate"],
-                        invert: false,
                     },
-                    Term {
+                    Term::Match {
+                        invert: false,
                         tokens: vec!["bar"],
-                        invert: false,
                     },
-                ],
+                ]),
             },
         )
     }
@@ -165,10 +252,56 @@ mod test {
         assert_parse(
             r#"foo:"""#,
             Query {
-                terms: vec![Term {
-                    tokens: vec!["foo", ""],
+                term: Term::Match {
                     invert: false,
-                }],
+                    tokens: vec!["foo", ""],
+                },
+            },
+        )
+    }
+
+    #[test]
+    fn test_qualifier_multi() {
+        assert_parse(
+            r#"foo:a,b,c"#,
+            Query {
+                term: Term::Or(vec![
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo", "a"],
+                    },
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo", "b"],
+                    },
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo", "c"],
+                    },
+                ]),
+            },
+        )
+    }
+
+    #[test]
+    fn test_qualifier_multi_quote() {
+        assert_parse(
+            r#"foo:a,"foo () bar",c"#,
+            Query {
+                term: Term::Or(vec![
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo", "a"],
+                    },
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo", "foo () bar"],
+                    },
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["foo", "c"],
+                    },
+                ]),
             },
         )
     }
@@ -178,16 +311,16 @@ mod test {
         assert_parse(
             r#"-is:something is:something"#,
             Query {
-                terms: vec![
-                    Term {
-                        tokens: vec!["is", "something"],
+                term: Term::And(vec![
+                    Term::Match {
                         invert: true,
-                    },
-                    Term {
                         tokens: vec!["is", "something"],
-                        invert: false,
                     },
-                ],
+                    Term::Match {
+                        invert: false,
+                        tokens: vec!["is", "something"],
+                    },
+                ]),
             },
         )
     }
@@ -197,10 +330,10 @@ mod test {
         assert_parse(
             r#"size:*..*"#,
             Query {
-                terms: vec![Term {
-                    tokens: vec!["size", "*..*"],
+                term: Term::Match {
                     invert: false,
-                }],
+                    tokens: vec!["size", "*..*"],
+                },
             },
         )
     }
@@ -210,11 +343,147 @@ mod test {
         assert_parse(
             r#"date:2022-01-01"#,
             Query {
-                terms: vec![Term {
-                    tokens: vec!["date", "2022-01-01"],
+                term: Term::Match {
                     invert: false,
-                }],
+                    tokens: vec!["date", "2022-01-01"],
+                },
             },
-        )
+        );
+    }
+
+    #[test]
+    fn test_not() {
+        assert_parse(
+            r#"NOT A"#,
+            Query {
+                term: Term::Not(Box::new(Term::r#match(["A"]))),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_basic() {
+        assert_parse(
+            r#"A B C"#,
+            Query {
+                term: Term::and([
+                    Term::r#match(["A"]),
+                    Term::r#match(["B"]),
+                    Term::r#match(["C"]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_simple() {
+        assert_parse(
+            r#"A AND B"#,
+            Query {
+                term: Term::and([Term::r#match(["A"]), Term::r#match(["B"])]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_mixed() {
+        assert_parse(
+            r#"A B C AND D"#,
+            Query {
+                term: Term::and([
+                    Term::r#match(["A"]),
+                    Term::r#match(["B"]),
+                    Term::r#match(["C"]),
+                    Term::r#match(["D"]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_mixed_2() {
+        assert_parse(
+            r#"A B OR C"#,
+            Query {
+                term: Term::and([
+                    Term::r#match(["A"]),
+                    Term::or([Term::r#match(["B"]), Term::r#match(["C"])]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_mixed_3() {
+        assert_parse(
+            r#"A OR B AND C"#,
+            Query {
+                term: Term::or([
+                    Term::r#match(["A"]),
+                    Term::and([Term::r#match(["B"]), Term::r#match(["C"])]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_mixed_4() {
+        assert_parse(
+            r#"A OR B C"#,
+            Query {
+                term: Term::and([
+                    Term::or([Term::r#match(["A"]), Term::r#match(["B"])]),
+                    Term::r#match(["C"]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_or_1() {
+        assert_parse(
+            r#"A AND B AND C OR D"#,
+            Query {
+                term: Term::or([
+                    Term::and([
+                        Term::r#match(["A"]),
+                        Term::r#match(["B"]),
+                        Term::r#match(["C"]),
+                    ]),
+                    Term::r#match(["D"]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_or_2() {
+        assert_parse(
+            r#"A B C OR D"#,
+            Query {
+                term: Term::and([
+                    Term::r#match(["A"]),
+                    Term::r#match(["B"]),
+                    Term::or([Term::r#match(["C"]), Term::r#match(["D"])]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_and_or_3() {
+        assert_parse(
+            r#"( A B C ) OR D"#,
+            Query {
+                term: Term::or([
+                    Term::and([
+                        Term::r#match(["A"]),
+                        Term::r#match(["B"]),
+                        Term::r#match(["C"]),
+                    ]),
+                    Term::r#match(["D"]),
+                ]),
+            },
+        );
     }
 }

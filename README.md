@@ -70,13 +70,13 @@ Now, you can do the following queries:
 | `size:>10000`                                     | … having a size greater than 10000                                                                |
 | `size:100..200`                                   | … having a size between 100 (inclusive) and 200 (exclusive)                                       |
 | `-is:read`                                        | … being "not read"                                                                                |
-| `foo sort:sent`                                   | … containing "foo" in the subject, sorted by "sent" ascending                                       | 
-| `foo -sort:sent`                                  | … containing "foo" in the subject, sorted by "sent" descending                                      |
+| `foo sort:sent`                                   | … containing "foo" in the subject, sorted by "sent" ascending                                     | 
+| `foo -sort:sent`                                  | … containing "foo" in the subject, sorted by "sent" descending                                    |
 | `sender:"Max Mustermann"`                         | … having a sender of `Max Mustermann`                                                             |
 | `sender:"Max Mustermann" sender:"Eva Mustermann"` | … having a sender of `Max Mustermann` and `Eva Mustermann` (most likely no results will be found) |
-
-## ToDo
-
-* [x] Implement the derive (waiting to stabilize the API)
-* [ ] Re-consider `AND`, `OR`, `NOT`, and groups
-* [x] Re-export chumsky
+| `sender:"Max Mustermann","Eva Mustermann"`        | … having a sender of `Max Mustermann` or `Eva Mustermann`                                         |
+| `foo OR bar`                                      | … containing "foo" or "bar" in the "subject"                                                      |
+| `foo AND bar`                                     | … containing "foo" and "bar" in the "subject"                                                     |
+| `foo OR bar AND baz`                              | … containing either "foo" or ( "bar" and "baz" ) in the "subject"                                 |
+| `(foo OR bar) AND baz`                            | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                        |
+| `foo OR bar baz`                                  | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                        |
