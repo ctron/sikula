@@ -222,7 +222,7 @@ where
     ///
     /// In case a `not` is provided to this method, its value is used instead without wrapping
     /// another "not".
-    pub fn not(term: Term<'a, S>) -> Self {
+    pub fn new_not(term: Term<'a, S>) -> Self {
         match term {
             Term::Not(term) => *term,
             otherwise => Term::Not(Box::new(otherwise)),
@@ -299,7 +299,7 @@ pub trait Search<'a>: Sized {
             term: mir::Term<'a>,
         ) -> Result<Term<'a, S>, Error<'a>> {
             match term {
-                mir::Term::Not(term) => Ok(Term::not(translate(context, *term)?)),
+                mir::Term::Not(term) => Ok(Term::new_not(translate(context, *term)?)),
                 mir::Term::And { terms, scopes } => {
                     let context = context.push(translate_scopes::<S>(scopes)?);
                     Ok(Term::And(
@@ -321,7 +321,7 @@ pub trait Search<'a>: Sized {
                 mir::Term::Match {
                     qualifier,
                     expression,
-                } => Ok(S::translate_match(&context, qualifier, expression)?),
+                } => Ok(S::translate_match(context, qualifier, expression)?),
             }
         }
 
@@ -512,7 +512,7 @@ impl<'a> FromExpression<'a> for Primary<'a> {
 
 /// Convenience method to parse a string into a [mir::Query], when being used in [`crate::lir`].
 #[doc(hidden)]
-pub fn parse_query<'a>(q: &'a str) -> Result<mir::Query<'a>, Error> {
+pub fn parse_query(q: &str) -> Result<mir::Query, Error> {
     Ok(mir::Query::parse(
         parser().parse(q).into_result().map_err(|s| {
             Error::Parser(
