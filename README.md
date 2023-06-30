@@ -27,26 +27,34 @@ Assuming you have an enum defined for searching e-mails:
 ```rust
 use sikula::prelude::*;
 
-#[derive(Search)]
-pub enum MyResource<'a> {
-     #[search(scope, default)]
-     Subject(Primary<'a>),
-     #[search(scope)]
-     Body(Primary<'a>),
+#[derive(Search, Clone, Debug, PartialEq, Eq)]
+enum DeriveResource<'a> {
+    /// Standard qualifier: `author:someone`
+    #[search(sort, scope)]
+    Author(&'a str),
+    /// Default primary: `warranty`
+    #[search(default)]
+    Subject(Primary<'a>),
+    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`
+    #[search(scope)]
+    Message(Primary<'a>),
 
-     Sender(&'a str),
+    /// Predicate: `is:read`
+    Read,
 
-     #[search(sort)]
-     Sent(Ordered<time::OffsetDateTime>),
-     #[search(sort)]
-     Size(Ordered<usize>),
+    /// Numeric qualifier example:
+    /// * `size:100` (equals)
+    /// * `size:>=100` (size greater than or equals 100)
+    /// * `size:100..200` (size between 100 inclusive and 200 exclusive)
+    /// * `size:*..200` (size up to 200 exclusive)
+    #[search(sort)]
+    Size(Ordered<usize>),
 
-     #[search(sort)]
-     Header(Qualified<'a, &'a str>),
+    #[search(sort)]
+    Sent(Ordered<time::OffsetDateTime>),
 
-     Read,
-     Important,
- }
+    Label(Qualified<'a, &'a str>),
+}
 ```
 
 The `Query` derive provides the trait implementation. The `#[query(scope)]` attribute flags the variant `Subject`
@@ -64,8 +72,8 @@ Now, you can do the following queries:
 | Query                                             | Retrieves all entries…                                                                            |
 |---------------------------------------------------|---------------------------------------------------------------------------------------------------|
 | `foo`                                             | … containing "foo" in the "subject"                                                               |
-| `foo in:subject in:body`                          | … containing "foo" in either "subject" or "body"                                                  |
-| `foo in:subject in:body is:read`                  | … containing "foo" in either "subject" or "body" being "read"                                     |
+| `foo in:subject in:message`                       | … containing "foo" in either "subject" or "body"                                                  |
+| `foo in:subject in:message is:read`               | … containing "foo" in either "subject" or "body" being "read"                                     |
 | `foo bar`                                         | … containing "foo" and "bar" in the subject                                                       |
 | `size:>10000`                                     | … having a size greater than 10000                                                                |
 | `size:100..200`                                   | … having a size between 100 (inclusive) and 200 (exclusive)                                       |
@@ -80,3 +88,34 @@ Now, you can do the following queries:
 | `foo OR bar AND baz`                              | … containing either "foo" or ( "bar" and "baz" ) in the "subject"                                 |
 | `(foo OR bar) AND baz`                            | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                        |
 | `foo OR bar baz`                                  | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                        |
+
+For testing more examples with the resource above, you can run the `cli` example:
+
+```shell
+cargo run --example cli --features time -- -is:read AND foo
+```
+
+Which will give you a structured output of the parsed query:
+
+```
+Input: '-is:read AND foo'
+Query {
+    terms: And(
+        [
+            Not(
+                Match(
+                    Read,
+                ),
+            ),
+            Match(
+                Subject(
+                    Partial(
+                        "foo",
+                    ),
+                ),
+            ),
+        ],
+    ),
+    sorting: [],
+}
+```
