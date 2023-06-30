@@ -30,5 +30,9 @@ required-features = ["time"]
 name = "derive"
 required-features = ["time"]
 
+[[example]]
+name = "cli"
+required-features = ["time"]
+
 [package.metadata."docs.rs"]
 all-features = true
