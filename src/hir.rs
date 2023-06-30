@@ -18,7 +18,7 @@ impl<'a> Term<'a> {
         match self {
             Term::And(terms) => terms.iter().collect::<Vec<_>>(),
             Term::Or(terms) => terms.iter().collect::<Vec<_>>(),
-            Term::Not(term) => vec![&term],
+            Term::Not(term) => vec![term],
             Term::Match { .. } => vec![],
         }
     }

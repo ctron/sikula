@@ -35,10 +35,7 @@ pub fn expression_string<'a>(
         .at_least(1)
         .map_slice(|s| s)
         // filter out keywords in non-escaped values
-        .filter(|ident| match *ident {
-            "OR" | "AND" | "NOT" => false,
-            _ => true,
-        })
+        .filter(|ident| !matches!(*ident, "OR" | "AND" | "NOT"))
 }
 
 pub fn value<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
@@ -74,7 +71,7 @@ pub fn term_match<'a>() -> impl Parser<'a, &'a str, Term<'a>, extra::Err<Simple<
             // expand multi value case
             let terms = values.into_iter().map(|value| {
                 // take base tokens and add value
-                let tokens = tokens.iter().map(|token| *token).chain([value]).collect();
+                let tokens = tokens.iter().copied().chain([value]).collect();
                 Term::Match { invert, tokens }
             });
 
@@ -110,9 +107,7 @@ pub fn parser<'a>() -> impl Parser<'a, &'a str, Query<'a>, extra::Err<Simple<'a,
                 Term::binary(Term::Or, lhs, rhs)
             });
 
-        or.repeated()
-            .collect::<Vec<_>>()
-            .map(|terms| Term::and(terms))
+        or.repeated().collect::<Vec<_>>().map(Term::and)
     })
     .padded()
     .map(|term| Query {

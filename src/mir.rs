@@ -169,7 +169,7 @@ impl<'a> Query<'a> {
         term: &hir::Term<'a>,
     ) -> Vec<Term<'a>> {
         match term {
-            hir::Term::Not(term) => Self::parse_term(sorting, scopes, &term)
+            hir::Term::Not(term) => Self::parse_term(sorting, scopes, term)
                 .into_iter()
                 .map(|term| Term::Not(Box::new(term)))
                 .collect(),
