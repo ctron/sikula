@@ -42,6 +42,23 @@ fn test_scopes() {
     )
 }
 
+#[test]
+fn test_scopes_2() {
+    // query "in" a scope, but not the default, the default must be gone then
+    let r = DeriveResource::parse(r#"bar foo in:message"#).unwrap();
+
+    assert_eq!(
+        Query {
+            term: Term::And(vec![
+                Term::Match(DeriveResource::Message(Primary::Partial("bar"))),
+                Term::Match(DeriveResource::Message(Primary::Partial("foo")))
+            ]),
+            sorting: vec![],
+        },
+        r
+    )
+}
+
 fn assert_query<'a>(q: &'a str, expected: Query<'a, DeriveResource<'a>>) {
     let r = DeriveResource::parse(q).unwrap();
     assert_eq!(expected, r)

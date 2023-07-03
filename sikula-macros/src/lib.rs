@@ -155,7 +155,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             quote! {
                 [] => {
                     let mut terms = vec![];
-                    for scope in context.aggregated_scopes() {
+                    for scope in &context.scopes {
                         let expression = match scope {
                             #(#match_primaries, )*
                         };

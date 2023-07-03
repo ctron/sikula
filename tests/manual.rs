@@ -86,7 +86,7 @@ impl<'a> Search<'a> for ManualResource<'a> {
                 [] => {
                     // primary
                     let mut terms = vec![];
-                    for scope in context.aggregated_scopes() {
+                    for scope in &context.scopes {
                         let expression = match scope {
                             ManualResourceScope::Subject => {
                                 Term::Match(Self::Subject(expression.into_expression(

@@ -279,8 +279,10 @@ pub trait Search<'a>: Sized {
     fn default_scopes() -> Vec<Self::Scope>;
 
     fn parse(q: &'a str) -> Result<Query<Self>, Error> {
-        let query = parse_query(q)?;
+        Self::parse_from(parse_query(q)?)
+    }
 
+    fn parse_from(query: mir::Query<'a>) -> Result<Query<Self>, Error> {
         Ok(Query {
             term: Self::translate_term(query.term)?,
             sorting: translate_sorting::<Self>(query.sorting)?,
@@ -331,7 +333,6 @@ pub trait Search<'a>: Sized {
 
 pub struct Context<'a, 'p, S: Search<'a>> {
     parent: Option<&'p Self>,
-    aggregated_scopes: Vec<S::Scope>,
 
     pub scopes: Vec<S::Scope>,
 }
@@ -341,29 +342,20 @@ impl<'a, 'p, S: Search<'a>> Context<'a, 'p, S> {
         Self {
             parent: None,
             scopes: S::default_scopes(),
-            aggregated_scopes: S::default_scopes(),
         }
     }
 
     pub fn push(&'p self, scopes: Vec<S::Scope>) -> Context<'a, 'p, S> {
-        let mut aggregated_scopes = self.aggregated_scopes.clone();
-
-        for scope in &scopes {
-            // FIXME: this can become expensive, we might want to find another way
-            if !aggregated_scopes.contains(scope) {
-                aggregated_scopes.push(scope.clone());
-            }
-        }
+        let scopes = if scopes.is_empty() {
+            self.scopes.clone()
+        } else {
+            scopes
+        };
 
         Self {
             parent: Some(self),
             scopes,
-            aggregated_scopes,
         }
-    }
-
-    pub fn aggregated_scopes(&self) -> &[S::Scope] {
-        &self.aggregated_scopes
     }
 
     /// call the provided function for this, walking up the parent chain, calling it for every parent
@@ -591,15 +583,14 @@ mod test {
     }
 
     #[test]
-    fn aggregated_1() {
+    fn scopes_1() {
         let ctx = Context::<Mock>::root();
         let child1 = ctx.push(vec![]);
         let child2 = child1.push(vec![vec!["child2".to_string()]]);
 
-        let scopes = child2.aggregated_scopes();
-        assert_eq!(
-            scopes,
-            &[vec!["default".to_string()], vec!["child2".to_string()]]
-        );
+        // we should only get the last defined (non-empty list)
+        assert_eq!(&ctx.scopes, &[vec!["default".to_string()]]);
+        assert_eq!(&child1.scopes, &[vec!["default".to_string()]]);
+        assert_eq!(&child2.scopes, &[vec!["child2".to_string()]]);
     }
 }
