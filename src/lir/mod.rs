@@ -281,7 +281,7 @@ pub trait Search: Sized {
 
     fn default_scopes() -> Vec<Self::Scope>;
 
-    fn parse<'a>(q: &'a str) -> Result<Query<Self::Parsed<'a>>, Error> {
+    fn parse(q: &str) -> Result<Query<Self::Parsed<'_>>, Error> {
         Self::parse_from(parse_query(q)?)
     }
 
@@ -298,7 +298,7 @@ pub trait Search: Sized {
         expression: mir::Expression<'a>,
     ) -> Result<Term<'a, Self::Parsed<'a>>, Error<'a>>;
 
-    fn translate_term<'a>(term: mir::Term<'a>) -> Result<Term<Self::Parsed<'a>>, Error<'a>> {
+    fn translate_term(term: mir::Term<'_>) -> Result<Term<Self::Parsed<'_>>, Error<'_>> {
         translate::<Self>(&Context::root(), term)
     }
 }
