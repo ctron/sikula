@@ -206,9 +206,9 @@ pub struct Sort<S> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Term<'a, S>
 where
-    S: Search<'a>,
+    S: Search,
 {
-    Match(S::Parsed),
+    Match(S::Parsed<'a>),
     Not(Box<Term<'a, S>>),
     Or(Vec<Term<'a, S>>),
     And(Vec<Term<'a, S>>),
@@ -216,7 +216,7 @@ where
 
 impl<'a, S> Term<'a, S>
 where
-    S: Search<'a>,
+    S: Search,
 {
     /// convenience method creating a [`Term::Not`].
     ///
@@ -240,7 +240,7 @@ where
 
 pub struct Query<'a, S>
 where
-    S: Search<'a>,
+    S: Search,
 {
     pub term: Term<'a, S>,
     pub sorting: Vec<Sort<S::Sortable>>,
@@ -248,8 +248,8 @@ where
 
 impl<'a, S> Debug for Query<'a, S>
 where
-    S: Search<'a> + Debug,
-    S::Parsed: Debug,
+    S: Search + Debug,
+    S::Parsed<'a>: Debug,
     S::Sortable: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -262,8 +262,8 @@ where
 
 impl<'a, S> PartialEq for Query<'a, S>
 where
-    S: Search<'a> + PartialEq,
-    S::Parsed: PartialEq,
+    S: Search + PartialEq,
+    S::Parsed<'a>: PartialEq,
     S::Sortable: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -271,73 +271,76 @@ where
     }
 }
 
-pub trait Search<'a>: Sized {
-    type Parsed;
+/// A trait to define a resource as searchable.
+///
+/// *NOTE:* This is a trait which is normally implemented through `#[derive(Search)]`.
+pub trait Search: Sized {
+    type Parsed<'a>: Search;
     type Sortable: FromQualifier;
     type Scope: FromQualifier + Eq + Hash + Clone;
 
     fn default_scopes() -> Vec<Self::Scope>;
 
-    fn parse(q: &'a str) -> Result<Query<Self>, Error> {
+    fn parse<'a>(q: &'a str) -> Result<Query<Self::Parsed<'a>>, Error> {
         Self::parse_from(parse_query(q)?)
     }
 
-    fn parse_from(query: mir::Query<'a>) -> Result<Query<Self>, Error> {
+    fn parse_from<'a>(query: mir::Query<'a>) -> Result<Query<Self::Parsed<'a>>, Error> {
         Ok(Query {
             term: Self::translate_term(query.term)?,
-            sorting: translate_sorting::<Self>(query.sorting)?,
+            sorting: translate_sorting::<Self::Parsed<'a>>(query.sorting)?,
         })
     }
 
-    fn translate_match(
-        context: &Context<'a, '_, Self>,
+    fn translate_match<'a>(
+        context: &Context<'_, Self::Parsed<'a>>,
         qualifier: Qualifier<'a>,
         expression: mir::Expression<'a>,
-    ) -> Result<Term<'a, Self>, Error<'a>>;
+    ) -> Result<Term<'a, Self::Parsed<'a>>, Error<'a>>;
 
-    fn translate_term(term: mir::Term<'a>) -> Result<Term<'a, Self>, Error<'a>> {
-        fn translate<'a, S: Search<'a>>(
-            context: &Context<'a, '_, S>,
-            term: mir::Term<'a>,
-        ) -> Result<Term<'a, S>, Error<'a>> {
-            match term {
-                mir::Term::Not(term) => Ok(Term::new_not(translate(context, *term)?)),
-                mir::Term::And { terms, scopes } => {
-                    let context = context.push(translate_scopes::<S>(scopes)?);
-                    Ok(Term::And(
-                        terms
-                            .into_iter()
-                            .map(|term| translate(&context, term))
-                            .collect::<Result<_, _>>()?,
-                    ))
-                }
-                mir::Term::Or { terms, scopes } => {
-                    let context = context.push(translate_scopes::<S>(scopes)?);
-                    Ok(Term::Or(
-                        terms
-                            .into_iter()
-                            .map(|term| translate(&context, term))
-                            .collect::<Result<_, _>>()?,
-                    ))
-                }
-                mir::Term::Match {
-                    qualifier,
-                    expression,
-                } => Ok(S::translate_match(context, qualifier, expression)?),
-            }
-        }
-
-        translate(&Context::root(), term)
+    fn translate_term<'a>(term: mir::Term<'a>) -> Result<Term<Self::Parsed<'a>>, Error<'a>> {
+        translate::<Self>(&Context::root(), term)
     }
 }
 
-pub struct Context<'a, 'p, S: Search<'a>> {
+fn translate<'a, S: Search>(
+    context: &Context<'_, S::Parsed<'a>>,
+    term: mir::Term<'a>,
+) -> Result<Term<'a, S::Parsed<'a>>, Error<'a>> {
+    match term {
+        mir::Term::Not(term) => Ok(Term::new_not(translate::<S>(context, *term)?)),
+        mir::Term::And { terms, scopes } => {
+            let context = context.push(translate_scopes::<S>(scopes)?);
+            Ok(Term::And(
+                terms
+                    .into_iter()
+                    .map(|term| translate::<S>(&context, term))
+                    .collect::<Result<_, _>>()?,
+            ))
+        }
+        mir::Term::Or { terms, scopes } => {
+            let context = context.push(translate_scopes::<S>(scopes)?);
+            Ok(Term::Or(
+                terms
+                    .into_iter()
+                    .map(|term| translate::<S>(&context, term))
+                    .collect::<Result<_, _>>()?,
+            ))
+        }
+        mir::Term::Match {
+            qualifier,
+            expression,
+        } => Ok(S::translate_match(context, qualifier, expression)?),
+    }
+}
+
+pub struct Context<'p, S: Search> {
     parent: Option<&'p Self>,
 
     pub scopes: Vec<S::Scope>,
 }
 
-impl<'a, 'p, S: Search<'a>> Context<'a, 'p, S> {
+impl<'p, S: Search> Context<'p, S> {
     pub fn root() -> Self {
         Self {
             parent: None,
@@ -345,7 +348,7 @@ impl<'a, 'p, S: Search<'a>> Context<'a, 'p, S> {
         }
     }
 
-    pub fn push(&'p self, scopes: Vec<S::Scope>) -> Context<'a, 'p, S> {
+    pub fn push(&'p self, scopes: Vec<S::Scope>) -> Context<'p, S> {
         let scopes = if scopes.is_empty() {
             self.scopes.clone()
         } else {
@@ -479,6 +482,11 @@ where
     }
 }
 
+/// A primary search term.
+///
+/// This is intended to be used by `#[search(scope)]` or `#[search(default)]` values. If the term
+/// is presented as an unqualified term, it will be translated into a [`Self::Partial`] variant, if
+/// it is being used as part of a qualified term, it will be an [`Self::Equal`] variant.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Primary<'a> {
     Equal(&'a str),
@@ -519,8 +527,8 @@ pub fn parse_query(q: &str) -> Result<mir::Query, Error> {
 
 /// Translate from [`mir::Sort`] into [`lir::Sort`].
 #[doc(hidden)]
-pub fn translate_sorting<'a, S: Search<'a>>(
-    sorting: Vec<mir::Sort<'a>>,
+pub fn translate_sorting<S: Search>(
+    sorting: Vec<mir::Sort>,
 ) -> Result<Vec<Sort<S::Sortable>>, Error> {
     sorting
         .into_iter()
@@ -536,13 +544,13 @@ pub fn translate_sorting<'a, S: Search<'a>>(
 
 /// Translate from [`mir::Scope`] into [`lir::Scope`].
 #[doc(hidden)]
-pub fn translate_scopes<'a, S: Search<'a>>(
-    scopes: Vec<Qualifier<'a>>,
-) -> Result<Vec<S::Scope>, Error<'a>> {
+pub fn translate_scopes<'a, S: Search>(
+    scopes: Vec<Qualifier>,
+) -> Result<Vec<<S::Parsed<'a> as Search>::Scope>, Error> {
     scopes
         .into_iter()
         .map(|qualifier| {
-            S::Scope::from_qualifier(&qualifier)
+            <S::Parsed<'a> as Search>::Scope::from_qualifier(&qualifier)
                 .map_err(|_| Error::UnknownScopeQualifier(qualifier))
         })
         .collect()
@@ -554,8 +562,8 @@ mod test {
     use crate::mir::Expression;
 
     struct Mock;
-    impl<'a> Search<'a> for Mock {
-        type Parsed = ();
+    impl Search for Mock {
+        type Parsed<'a> = Mock;
         type Sortable = Vec<String>;
         type Scope = Vec<String>;
 
@@ -563,11 +571,11 @@ mod test {
             vec![vec!["default".to_string()]]
         }
 
-        fn translate_match(
-            _context: &Context<'a, '_, Self>,
+        fn translate_match<'a>(
+            _context: &Context<'_, Self>,
             _qualifier: Qualifier<'a>,
             _expression: Expression<'a>,
-        ) -> Result<Term<'a, Self>, Error<'a>> {
+        ) -> Result<Term<'a, Self::Parsed<'a>>, Error<'a>> {
             todo!()
         }
     }

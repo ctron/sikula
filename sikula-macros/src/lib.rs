@@ -117,7 +117,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
         let value = &predicate.name;
         let ident = &predicate.ident;
         quote! {
-            [#value] => Term::Match(Self::#ident)
+            [#value] => Term::Match(Self::Parsed::<'a>::#ident)
         }
     });
 
@@ -125,7 +125,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
         let value = &qualifier.name;
         let ident = &qualifier.ident;
         quote! {
-            [#value, n @ ..] => sikula::prelude::Term::Match(Self::#ident (
+            [#value, n @ ..] => sikula::prelude::Term::Match(Self::Parsed::<'a>::#ident (
                 expression.into_expression(sikula::prelude::QualifierContext::Qualifier, n.into())?,
             ))
         }
@@ -138,7 +138,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
             let ident = &scope.ident;
             quote! {
                 Self::Scope::#ident => {
-                    sikula::prelude::Term::Match(Self::#ident(expression.into_expression(
+                    sikula::prelude::Term::Match(Self::Parsed::<'a>::#ident(expression.into_expression(
                         sikula::prelude::QualifierContext::Primary,
                         sikula::prelude::Qualifier::empty(),
                     )?))
@@ -168,8 +168,8 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
     };
 
     quote! {
-        impl<'a> sikula::prelude::Search<'a> for #ident <'a> {
-            type Parsed = #ident<'a>;
+        impl<'s> sikula::lir::Search for #ident<'s> {
+            type Parsed<'t> = #ident<'t>;
             type Sortable = #ident_sortable;
             type Scope = #ident_scope;
 
@@ -177,11 +177,11 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
                 vec![ #(#default_scope, )* ]
             }
 
-            fn translate_match(
-                context: &sikula::lir::Context<'a, '_, Self>,
+            fn translate_match<'a>(
+                context: &sikula::lir::Context<'_, Self::Parsed<'a>>,
                 qualifier: sikula::mir::Qualifier<'a>,
                 expression: sikula::mir::Expression<'a>,
-            ) -> Result<sikula::lir::Term<'a, Self>, Error<'a>> {
+            ) -> Result<sikula::lir::Term<'a, Self::Parsed<'a>>, Error<'a>> {
 
                 Ok(match expression {
                     sikula::mir::Expression::Predicate => match qualifier.as_slice() {

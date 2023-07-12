@@ -63,8 +63,8 @@ impl FromQualifier for ManualResourceScope {
     }
 }
 
-impl<'a> Search<'a> for ManualResource<'a> {
-    type Parsed = ManualResource<'a>;
+impl<'r> Search for ManualResource<'r> {
+    type Parsed<'a> = ManualResource<'a>;
     type Sortable = ManualResourceSortable;
     type Scope = ManualResourceScope;
 
@@ -72,14 +72,14 @@ impl<'a> Search<'a> for ManualResource<'a> {
         vec![Self::Scope::Subject]
     }
 
-    fn translate_match(
-        context: &Context<'a, '_, Self>,
-        qualifier: mir::Qualifier<'a>,
+    fn translate_match<'a>(
+        context: &Context<'_, Self::Parsed<'a>>,
+        qualifier: Qualifier<'a>,
         expression: mir::Expression<'a>,
-    ) -> Result<Term<'a, ManualResource<'a>>, Error<'a>> {
+    ) -> Result<Term<'a, Self::Parsed<'a>>, Error<'a>> {
         let term = match expression {
             mir::Expression::Predicate => match qualifier.as_slice() {
-                ["read"] => Term::Match(Self::Read),
+                ["read"] => Term::Match(Self::Parsed::<'a>::Read),
                 _ => return Err(Error::UnknownPredicate(qualifier)),
             },
             mir::Expression::Simple(expression) => match qualifier.as_slice() {
@@ -88,39 +88,39 @@ impl<'a> Search<'a> for ManualResource<'a> {
                     let mut terms = vec![];
                     for scope in &context.scopes {
                         let expression = match scope {
-                            ManualResourceScope::Subject => {
-                                Term::Match(Self::Subject(expression.into_expression(
+                            ManualResourceScope::Subject => Term::Match(
+                                Self::Parsed::<'a>::Subject(expression.into_expression(
                                     QualifierContext::Primary,
                                     Qualifier::empty(),
-                                )?))
-                            }
-                            ManualResourceScope::Message => {
-                                Term::Match(Self::Message(expression.into_expression(
+                                )?),
+                            ),
+                            ManualResourceScope::Message => Term::Match(
+                                Self::Parsed::<'a>::Message(expression.into_expression(
                                     QualifierContext::Primary,
                                     Qualifier::empty(),
-                                )?))
-                            }
+                                )?),
+                            ),
                         };
                         terms.push(expression);
                     }
                     Term::Or(terms)
                 }
-                ["message", n @ ..] => Term::Match(Self::Message(
+                ["message", n @ ..] => Term::Match(Self::Parsed::<'a>::Message(
                     expression.into_expression(QualifierContext::Qualifier, n.into())?,
                 )),
-                ["subject", n @ ..] => Term::Match(Self::Subject(
+                ["subject", n @ ..] => Term::Match(Self::Parsed::<'a>::Subject(
                     expression.into_expression(QualifierContext::Qualifier, n.into())?,
                 )),
-                ["author", n @ ..] => Term::Match(Self::Author(
+                ["author", n @ ..] => Term::Match(Self::Parsed::<'a>::Author(
                     expression.into_expression(QualifierContext::Qualifier, n.into())?,
                 )),
-                ["sent", n @ ..] => Term::Match(Self::Sent(
+                ["sent", n @ ..] => Term::Match(Self::Parsed::<'a>::Sent(
                     expression.into_expression(QualifierContext::Qualifier, n.into())?,
                 )),
-                ["size", n @ ..] => Term::Match(Self::Size(
+                ["size", n @ ..] => Term::Match(Self::Parsed::<'a>::Size(
                     expression.into_expression(QualifierContext::Qualifier, n.into())?,
                 )),
-                ["label", n @ ..] => Term::Match(Self::Label(
+                ["label", n @ ..] => Term::Match(Self::Parsed::<'a>::Label(
                     expression.into_expression(QualifierContext::Qualifier, n.into())?,
                 )),
                 _ => return Err(Error::UnknownQualifier(qualifier)),
