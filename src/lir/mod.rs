@@ -13,6 +13,10 @@ use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::ops::{Bound, RangeBounds};
 
+/// Wrapper for types implementing [`Ord`], which allows using the comparison operators.
+///
+/// This type only consumes the comparison operators, parsing the values is left to the
+/// implementation of the actual type `<T>`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Ordered<T: Ord> {
     Equal(T),
@@ -152,6 +156,12 @@ where
     }
 }
 
+/// A qualified match.
+///
+/// Compared to a plain match ("is field equals to 'foo'"?), this queries inside a field. Most
+/// likely used with a map structure ("is key 'foo' of field equals to 'bar'"?).
+///
+/// Possible applications of this are things like header maps, or labels.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Qualified<'a, T>
 where
@@ -177,6 +187,7 @@ where
     }
 }
 
+/// Error when parsing.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum Error<'a> {
     #[error("Parser error: {0}")]
@@ -197,12 +208,14 @@ pub enum Error<'a> {
     UnsupportedPrimary(Qualifier<'a>),
 }
 
+/// Sorting instructions.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sort<S> {
     pub qualifier: S,
     pub direction: Direction,
 }
 
+/// A single search term, or expression.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Term<'a, S>
 where
@@ -238,6 +251,7 @@ where
     }
 }
 
+/// A combination of search terms and sorting.
 pub struct Query<'a, S>
 where
     S: Search,
@@ -375,9 +389,12 @@ impl<'p, S: Search> Context<'p, S> {
     }
 }
 
+/// Context information when transforming.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum QualifierContext {
+    /// part of a primary term (`<value>`)
     Primary,
+    /// part of a qualifier term (`qualifier:<value>`)
     Qualifier,
 }
 
@@ -396,6 +413,7 @@ impl FromQualifier for Vec<String> {
     }
 }
 
+/// Turn a qualifier into an expression.
 pub trait FromExpression<'a>: Sized {
     fn from_expression(
         context: QualifierContext,

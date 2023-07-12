@@ -1,6 +1,7 @@
 use crate::hir::{Query, Term};
 use chumsky::prelude::*;
 
+#[doc(hidden)]
 pub fn ident<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
     any()
         .filter(|c: &char| c.is_alphanumeric())
@@ -9,6 +10,7 @@ pub fn ident<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, ch
         .map_slice(|s: &'a str| s)
 }
 
+#[doc(hidden)]
 pub fn quoted_string<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone
 {
     just('"')
@@ -16,6 +18,7 @@ pub fn quoted_string<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simpl
         .then_ignore(just('"'))
 }
 
+#[doc(hidden)]
 pub fn expression_string<'a>(
 ) -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
     any()
@@ -38,10 +41,12 @@ pub fn expression_string<'a>(
         .filter(|ident| !matches!(*ident, "OR" | "AND" | "NOT"))
 }
 
+#[doc(hidden)]
 pub fn value<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone {
     quoted_string().or(expression_string())
 }
 
+#[doc(hidden)]
 pub fn values<'a>() -> impl Parser<'a, &'a str, Vec<&'a str>, extra::Err<Simple<'a, char>>> + Clone
 {
     value()
@@ -52,6 +57,7 @@ pub fn values<'a>() -> impl Parser<'a, &'a str, Vec<&'a str>, extra::Err<Simple<
         .collect()
 }
 
+#[doc(hidden)]
 pub fn term_match<'a>() -> impl Parser<'a, &'a str, Term<'a>, extra::Err<Simple<'a, char>>> + Clone
 {
     let invert = just('-').repeated().at_most(1).count();
