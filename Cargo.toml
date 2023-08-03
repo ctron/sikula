@@ -19,6 +19,9 @@ time = { version = "0.3", optional = true, features = ["parsing", "macros"] }
 
 sikula-macros = { version = "0.4.0-alpha.3", path = "sikula-macros" }
 
+[features]
+default = ["time"]
+
 [dev-dependencies]
 time = { version = "0.3", features = ["parsing", "macros"] }
 

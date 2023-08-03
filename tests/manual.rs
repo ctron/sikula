@@ -219,3 +219,25 @@ fn test_range_3() {
         Term::Match(ManualResource::Size(Ordered::from_range(..))),
     );
 }
+
+#[test]
+fn test_or_1() {
+    assert_term(
+        r#"((message:"a") OR (message:"b"))"#,
+        Term::Or(vec![
+            Term::Match(ManualResource::Message(Primary::Equal("a"))),
+            Term::Match(ManualResource::Message(Primary::Equal("b"))),
+        ]),
+    );
+}
+
+#[test]
+fn test_or_2() {
+    assert_term(
+        r#"(("a" in:message) OR ("b" in:message))"#,
+        Term::Or(vec![
+            Term::Match(ManualResource::Message(Primary::Partial("a"))),
+            Term::Match(ManualResource::Message(Primary::Partial("b"))),
+        ]),
+    );
+}
