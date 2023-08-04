@@ -221,6 +221,22 @@ fn test_range_3() {
 }
 
 #[test]
+fn test_equal() {
+    assert_term(
+        r#"message:a"#,
+        Term::Match(ManualResource::Message(Primary::Equal("a"))),
+    );
+}
+
+#[test]
+fn test_partial() {
+    assert_term(
+        r#"a in:message"#,
+        Term::Match(ManualResource::Message(Primary::Partial("a"))),
+    );
+}
+
+#[test]
 fn test_or_1() {
     assert_term(
         r#"((message:"a") OR (message:"b"))"#,
