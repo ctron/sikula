@@ -487,4 +487,27 @@ mod test {
             },
         );
     }
+
+    #[test]
+    fn test_or_1() {
+        assert_parse(
+            r#"( ( message:a ) OR ( message:b ) )"#,
+            Query {
+                term: Term::or([
+                    Term::r#match(["message", "a"]),
+                    Term::r#match(["message", "b"]),
+                ]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_partial() {
+        assert_parse(
+            r#"a in:message"#,
+            Query {
+                term: Term::r#match(["a", "in", "message"])
+            },
+        );
+    }
 }
