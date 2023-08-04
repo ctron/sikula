@@ -24,6 +24,7 @@ default = ["time"]
 
 [dev-dependencies]
 time = { version = "0.3", features = ["parsing", "macros"] }
+pretty_assertions = "1.4"
 
 [[test]]
 name = "manual"

@@ -1,3 +1,6 @@
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 use sikula::{mir, prelude::*};
 
 /// same as [`ExampleResource`], but manually implemented
@@ -232,7 +235,7 @@ fn test_equal() {
 fn test_partial() {
     assert_term(
         r#"a in:message"#,
-        Term::Match(ManualResource::Message(Primary::Partial("a"))),
+        Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(Primary::Partial("a")))])]),
     );
 }
 
@@ -250,10 +253,10 @@ fn test_or_1() {
 #[test]
 fn test_or_2() {
     assert_term(
-        r#"(("a" in:message) OR ("b" in:message))"#,
-        Term::Or(vec![
+        r#"((a in:message) OR (b in:message))"#,
+        Term::And(vec![Term::Or(vec![
             Term::Match(ManualResource::Message(Primary::Partial("a"))),
             Term::Match(ManualResource::Message(Primary::Partial("b"))),
-        ]),
+        ])]),
     );
 }
