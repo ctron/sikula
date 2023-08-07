@@ -245,7 +245,8 @@ where
     pub fn compact(self) -> Self {
         match self {
             Self::Or(mut terms) => {
-                let mut terms: Vec<Term<'a, S>> = terms.drain(..).map(|term| term.compact()).collect();
+                let mut terms: Vec<Term<'a, S>> =
+                    terms.drain(..).map(|term| term.compact()).collect();
                 if terms.len() == 1 {
                     terms.pop().unwrap()
                 } else {
@@ -253,7 +254,8 @@ where
                 }
             }
             Self::And(mut terms) => {
-                let mut terms: Vec<Term<'a, S>> = terms.drain(..).map(|term| term.compact()).collect();
+                let mut terms: Vec<Term<'a, S>> =
+                    terms.drain(..).map(|term| term.compact()).collect();
                 if terms.len() == 1 {
                     terms.pop().unwrap()
                 } else {
