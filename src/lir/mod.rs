@@ -244,8 +244,22 @@ where
 
     pub fn compact(self) -> Self {
         match self {
-            Self::Or(mut terms) if terms.len() == 1 => terms.pop().unwrap(),
-            Self::And(mut terms) if terms.len() == 1 => terms.pop().unwrap(),
+            Self::Or(mut terms) => {
+                let mut terms: Vec<Term<'a, S>> = terms.drain(..).map(|term| term.compact()).collect();
+                if terms.len() == 1 {
+                    terms.pop().unwrap()
+                } else {
+                    Self::Or(terms)
+                }
+            }
+            Self::And(mut terms) => {
+                let mut terms: Vec<Term<'a, S>> = terms.drain(..).map(|term| term.compact()).collect();
+                if terms.len() == 1 {
+                    terms.pop().unwrap()
+                } else {
+                    Self::And(terms)
+                }
+            }
             _ => self,
         }
     }
