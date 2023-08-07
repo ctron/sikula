@@ -25,24 +25,34 @@ impl<'a> Term<'a> {
 
     pub fn compact(self) -> Self {
         match self {
-            Self::And(terms) => Self::and(
-                terms
-                    .into_iter()
-                    .filter(|term| !term.is_empty())
-                    .flat_map(|term| match term {
-                        Term::And(terms) => terms,
-                        otherwise => vec![otherwise],
-                    }),
-            ),
-            Self::Or(terms) => Self::or(
-                terms
-                    .into_iter()
-                    .filter(|term| !term.is_empty())
-                    .flat_map(|term| match term {
-                        Term::Or(terms) => terms,
-                        otherwise => vec![otherwise],
-                    }),
-            ),
+            Self::And(mut terms) => {
+                if terms.len() == 1 {
+                    terms.remove(0).compact()
+                } else {
+                    Self::and(
+                        terms.into_iter().filter(|term| !term.is_empty()).flat_map(
+                            |term| match term {
+                                Term::And(terms) => terms,
+                                otherwise => vec![otherwise],
+                            },
+                        ),
+                    )
+                }
+            }
+            Self::Or(mut terms) => {
+                if terms.len() == 1 {
+                    terms.remove(0).compact()
+                } else {
+                    Self::or(
+                        terms.into_iter().filter(|term| !term.is_empty()).flat_map(
+                            |term| match term {
+                                Term::Or(terms) => terms,
+                                otherwise => vec![otherwise],
+                            },
+                        ),
+                    )
+                }
+            }
             Self::Not(term) => Self::Not(Box::new((*term).compact())),
             otherwise => otherwise,
         }
