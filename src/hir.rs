@@ -105,8 +105,6 @@ impl<'a> Term<'a> {
             lhs
         } else {
             match (lhs, rhs) {
-                (Term::And(lhs), Term::And(rhs)) => Term::And(lhs.into_iter().chain(rhs).collect()),
-                (Term::Or(lhs), Term::Or(rhs)) => Term::Or(lhs.into_iter().chain(rhs).collect()),
                 (lhs, rhs) => f(vec![lhs, rhs]),
             }
         }
