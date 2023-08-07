@@ -9,7 +9,7 @@ repository = "https://github.com/ctron/sikula"
 categories = ["parser-implementations", "parsing", "text-processing"]
 keywords = ["query", "language", "parser"]
 readme = "README.md"
-rust-version = "1.65"
+rust-version = "1.71"
 
 [dependencies]
 chumsky = "1.0.0-alpha.4"
