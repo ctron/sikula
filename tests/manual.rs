@@ -235,7 +235,9 @@ fn test_equal() {
 fn test_partial() {
     assert_term(
         r#"a in:message"#,
-        Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(Primary::Partial("a")))])]),
+        Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
+            Primary::Partial("a"),
+        ))])]),
     );
 }
 
@@ -254,9 +256,13 @@ fn test_or_1() {
 fn test_or_2() {
     assert_term(
         r#"((a in:message) OR (b in:message))"#,
-        Term::And(vec![Term::Or(vec![
-            Term::Match(ManualResource::Message(Primary::Partial("a"))),
-            Term::Match(ManualResource::Message(Primary::Partial("b"))),
-        ])]),
+        Term::Or(vec![
+            Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
+                Primary::Partial("a"),
+            ))])]),
+            Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
+                Primary::Partial("b"),
+            ))])]),
+        ]),
     );
 }

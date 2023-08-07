@@ -487,4 +487,37 @@ mod test {
             },
         );
     }
+
+    #[test]
+    fn test_partial() {
+        assert_parse(
+            r#"foo in:a"#,
+            Query {
+                term: Term::and([Term::r#match(["foo"]), Term::r#match(["in", "a"])]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_or_1() {
+        assert_parse(
+            r#"(( a:foo ) OR ( b:bar ))"#,
+            Query {
+                term: Term::or([Term::r#match(["a", "foo"]), Term::r#match(["b", "bar"])]),
+            },
+        );
+    }
+
+    #[test]
+    fn test_or_2() {
+        assert_parse(
+            r#"(foo in:a) OR (bar in:b)"#,
+            Query {
+                term: Term::or([
+                    Term::and([Term::r#match(["foo"]), Term::r#match(["in", "a"])]),
+                    Term::and([Term::r#match(["bar"]), Term::r#match(["in", "b"])]),
+                ]),
+            },
+        );
+    }
 }
