@@ -267,18 +267,23 @@ fn test_or_2() {
     );
 }
 
-
 #[test]
 fn test_compaction() {
     let term: Term<'_, ManualResource<'_>> = Term::Or(vec![
-            Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
-                Primary::Partial("a"),
-            ))])]),
-            Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
-                Primary::Partial("b"),
-            ))])]),
-        ]);
+        Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
+            Primary::Partial("a"),
+        ))])]),
+        Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
+            Primary::Partial("b"),
+        ))])]),
+    ]);
 
     let compacted = term.compact();
-    assert_eq!(compacted, Term::Or(vec![Term::Match(ManualResource::Message(Primary::Partial("a"))), Term::Match(ManualResource::Message(Primary::Partial("b")))]));
+    assert_eq!(
+        compacted,
+        Term::Or(vec![
+            Term::Match(ManualResource::Message(Primary::Partial("a"))),
+            Term::Match(ManualResource::Message(Primary::Partial("b")))
+        ])
+    );
 }
