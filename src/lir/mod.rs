@@ -87,6 +87,7 @@ where
     }
 }
 
+/// Similar to [`Ordered`], but requires only the [`PartialOrd`] trait.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PartialOrdered<T: PartialOrd> {
     Greater(T),
@@ -242,6 +243,7 @@ where
         }
     }
 
+    /// Tries to simplify the term structure.
     pub fn compact(self) -> Self {
         match self {
             Self::Or(mut terms) => {
@@ -309,12 +311,15 @@ pub trait Search: Sized {
     type Sortable: FromQualifier;
     type Scope: FromQualifier + Eq + Hash + Clone;
 
+    /// The default scopes, if the user didn't request any specifically.
     fn default_scopes() -> Vec<Self::Scope>;
 
+    /// Parse the query string to a query.
     fn parse(q: &str) -> Result<Query<Self::Parsed<'_>>, Error> {
         Self::parse_from(parse_query(q)?)
     }
 
+    /// Parse a pre-parsed [`mir::Query`] into a query.
     fn parse_from<'a>(query: mir::Query<'a>) -> Result<Query<Self::Parsed<'a>>, Error> {
         Ok(Query {
             term: Self::translate_term(query.term)?,
@@ -322,12 +327,14 @@ pub trait Search: Sized {
         })
     }
 
+    #[doc(hidden)]
     fn translate_match<'a>(
         context: &Context<'_, Self::Parsed<'a>>,
         qualifier: Qualifier<'a>,
         expression: mir::Expression<'a>,
     ) -> Result<Term<'a, Self::Parsed<'a>>, Error<'a>>;
 
+    #[doc(hidden)]
     fn translate_term(term: mir::Term<'_>) -> Result<Term<Self::Parsed<'_>>, Error<'_>> {
         translate::<Self>(&Context::root(), term)
     }

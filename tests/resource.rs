@@ -1,6 +1,6 @@
 use sikula::prelude::*;
 
-/// same as [`ExampleResource`], but manually implemented
+/// A resource implemented with the derive
 #[derive(Search, Clone, Debug, PartialEq, Eq)]
 enum DeriveResource<'x> {
     /// Standard qualifier: `author:someone`
