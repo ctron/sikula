@@ -23,41 +23,6 @@ impl<'a> Term<'a> {
         }
     }
 
-    pub fn compact(self) -> Self {
-        match self {
-            Self::And(mut terms) => {
-                if terms.len() == 1 {
-                    terms.remove(0).compact()
-                } else {
-                    Self::and(
-                        terms.into_iter().filter(|term| !term.is_empty()).flat_map(
-                            |term| match term {
-                                Term::And(terms) => terms,
-                                otherwise => vec![otherwise],
-                            },
-                        ),
-                    )
-                }
-            }
-            Self::Or(mut terms) => {
-                if terms.len() == 1 {
-                    terms.remove(0).compact()
-                } else {
-                    Self::or(
-                        terms.into_iter().filter(|term| !term.is_empty()).flat_map(
-                            |term| match term {
-                                Term::Or(terms) => terms,
-                                otherwise => vec![otherwise],
-                            },
-                        ),
-                    )
-                }
-            }
-            Self::Not(term) => Self::Not(Box::new((*term).compact())),
-            otherwise => otherwise,
-        }
-    }
-
     pub fn r#match(tokens: impl IntoIterator<Item = &'a str>) -> Self {
         Term::Match {
             tokens: tokens.into_iter().collect(),
@@ -96,9 +61,6 @@ impl<'a> Term<'a> {
     where
         F: FnOnce(Vec<Self>) -> Self,
     {
-        let lhs = lhs.compact();
-        let rhs = rhs.compact();
-
         if lhs.is_empty() {
             rhs
         } else if rhs.is_empty() {

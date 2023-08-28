@@ -176,6 +176,26 @@ fn test_scopes() {
     )
 }
 
+#[test]
+fn test_scopes_grouped() {
+    let r = ManualResource::parse(r#"bar (foo in:message)"#).unwrap();
+
+    assert_eq!(
+        Query {
+            term: Term::And(vec![
+                Term::Or(vec![Term::Match(ManualResource::Subject(
+                    Primary::Partial("bar")
+                )),]),
+                Term::And(vec![Term::Or(vec![Term::Match(ManualResource::Message(
+                    Primary::Partial("foo")
+                )),])])
+            ]),
+            sorting: vec![],
+        },
+        r
+    )
+}
+
 fn assert_query<'a>(q: &'a str, expected: Query<'a, ManualResource<'a>>) {
     let r = ManualResource::parse(q).unwrap();
     assert_eq!(expected, r)
