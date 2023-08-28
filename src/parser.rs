@@ -116,10 +116,7 @@ pub fn parser<'a>() -> impl Parser<'a, &'a str, Query<'a>, extra::Err<Simple<'a,
         or.repeated().collect::<Vec<_>>().map(Term::and)
     })
     .padded()
-    .map(|term| Query {
-        // turn into a query, compacting the tree
-        term: term.compact(),
-    })
+    .map(|term| Query { term })
 }
 
 #[cfg(test)]
@@ -394,8 +391,7 @@ mod test {
                 term: Term::and([
                     Term::r#match(["A"]),
                     Term::r#match(["B"]),
-                    Term::r#match(["C"]),
-                    Term::r#match(["D"]),
+                    Term::and([Term::r#match(["C"]), Term::r#match(["D"])]),
                 ]),
             },
         );
@@ -447,8 +443,7 @@ mod test {
             Query {
                 term: Term::or([
                     Term::and([
-                        Term::r#match(["A"]),
-                        Term::r#match(["B"]),
+                        Term::and([Term::r#match(["A"]), Term::r#match(["B"])]),
                         Term::r#match(["C"]),
                     ]),
                     Term::r#match(["D"]),
