@@ -267,6 +267,15 @@ where
             _ => self,
         }
     }
+
+    /// Returns true if there are no terms
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::And(terms) if terms.is_empty() => true,
+            Self::Or(terms) if terms.is_empty() => true,
+            _ => false,
+        }
+    }
 }
 
 /// A combination of search terms and sorting.
