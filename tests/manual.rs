@@ -307,3 +307,16 @@ fn test_compaction() {
         ])
     );
 }
+
+#[test]
+fn test_empty_query() {
+    let mut r = ManualResource::parse("message:a").unwrap();
+    assert!(!r.term.is_empty());
+    r.term = r.term.compact();
+    assert!(!r.term.is_empty());
+
+    let mut r = ManualResource::parse("sort:size").unwrap();
+    assert!(r.term.is_empty());
+    r.term = r.term.compact();
+    assert!(r.term.is_empty());
+}
