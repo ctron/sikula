@@ -1,6 +1,6 @@
 [package]
 name = "sikula"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
@@ -12,15 +12,16 @@ readme = "README.md"
 rust-version = "1.71"
 
 [dependencies]
-chumsky = "1.0.0-alpha.4"
+chumsky = { version = "1.0.0-alpha.4", default-features = false, features = ["std"] }
 thiserror = "1"
 
 time = { version = "0.3", optional = true, features = ["parsing", "macros"] }
 
-sikula-macros = { version = "0.4.0", path = "sikula-macros" }
+sikula-macros = { version = "0.4.1", path = "sikula-macros" }
 
 [features]
-default = ["time"]
+default = ["time", "spill-stack"]
+spill-stack = ["chumsky/spill-stack"]
 
 [dev-dependencies]
 time = { version = "0.3", features = ["parsing", "macros"] }
