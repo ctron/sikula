@@ -1,6 +1,6 @@
 [package]
 name = "sikula"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
@@ -17,7 +17,7 @@ thiserror = "1"
 
 time = { version = "0.3", optional = true, features = ["parsing", "macros"] }
 
-sikula-macros = { version = "0.4.1", path = "sikula-macros" }
+sikula-macros = { version = "0.4.2", path = "sikula-macros" }
 
 [features]
 default = ["time", "spill-stack"]
