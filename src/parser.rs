@@ -7,14 +7,15 @@ pub fn ident<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, ch
         .filter(|c: &char| c.is_alphanumeric())
         .repeated()
         .at_least(1)
-        .map_slice(|s: &'a str| s)
+        .to_slice()
+        .map(|s: &str| s)
 }
 
 #[doc(hidden)]
 pub fn quoted_string<'a>() -> impl Parser<'a, &'a str, &'a str, extra::Err<Simple<'a, char>>> + Clone
 {
     just('"')
-        .ignore_then(none_of('"').repeated().slice())
+        .ignore_then(none_of('"').repeated().to_slice())
         .then_ignore(just('"'))
 }
 
@@ -36,7 +37,8 @@ pub fn expression_string<'a>(
         })
         .repeated()
         .at_least(1)
-        .map_slice(|s| s)
+        .to_slice()
+        .map(|s: &str| s)
         // filter out keywords in non-escaped values
         .filter(|ident| !matches!(*ident, "OR" | "AND" | "NOT"))
 }
