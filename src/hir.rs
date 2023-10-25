@@ -66,9 +66,8 @@ impl<'a> Term<'a> {
         } else if rhs.is_empty() {
             lhs
         } else {
-            match (lhs, rhs) {
-                (lhs, rhs) => f(vec![lhs, rhs]),
-            }
+            let (lhs, rhs) = (lhs, rhs);
+            f(vec![lhs, rhs])
         }
     }
 }
