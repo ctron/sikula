@@ -82,3 +82,18 @@ where
         Bound::Excluded(value) => Some(excluded(value.into()).into_condition()),
     }
 }
+
+/// Helper trait to simplify the conversion of [`Ordered`] into [`Condition`].
+pub trait TranslateOrdered {
+    /// Translate into [`Condition`] for the provided column.
+    fn translate<C: ColumnTrait>(self, column: C) -> Condition;
+}
+
+impl<T> TranslateOrdered for Ordered<T>
+where
+    T: Ord + Into<Value>,
+{
+    fn translate<C: ColumnTrait>(self, column: C) -> Condition {
+        translate_ordered(column, self)
+    }
+}
