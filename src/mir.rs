@@ -62,6 +62,16 @@ pub enum Direction {
     Descending,
 }
 
+#[cfg(feature = "sea-orm")]
+impl From<Direction> for sea_orm::Order {
+    fn from(value: Direction) -> Self {
+        match value {
+            Direction::Ascending => sea_orm::Order::Asc,
+            Direction::Descending => sea_orm::Order::Desc,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sort<'a> {
     pub qualifier: Qualifier<'a>,
