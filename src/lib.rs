@@ -95,6 +95,10 @@ pub mod mir;
 /// Basic parsing
 pub mod parser;
 
+#[cfg(feature = "sea-orm")]
+/// Support for building SeaORM conditions
+pub mod sea_orm;
+
 /// The prelude
 pub mod prelude {
     pub use crate::lir::*;
