@@ -181,7 +181,7 @@ fn expand_search(ident: &Ident, info: &Info) -> TokenStream {
                 context: &sikula::lir::Context<'_, Self::Parsed<'a>>,
                 qualifier: sikula::mir::Qualifier<'a>,
                 expression: sikula::mir::Expression<'a>,
-            ) -> Result<sikula::lir::Term<'a, Self::Parsed<'a>>, Error<'a>> {
+            ) -> Result<sikula::lir::Term<'a, Self::Parsed<'a>>, sikula::lir::Error<'a>> {
 
                 Ok(match expression {
                     sikula::mir::Expression::Predicate => match qualifier.as_slice() {
