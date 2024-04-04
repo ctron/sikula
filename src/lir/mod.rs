@@ -1,9 +1,6 @@
 #[cfg(any(feature = "time", test))]
 mod time;
 
-#[cfg(any(feature = "time", test))]
-pub use self::time::*;
-
 use crate::{
     chumsky::Parser,
     mir::{self, Direction, Qualifier},
