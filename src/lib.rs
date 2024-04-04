@@ -104,6 +104,7 @@ pub mod prelude {
     pub use crate::lir::*;
     pub use crate::mir::Direction;
     pub use crate::mir::Qualifier;
+    pub use crate::mir::Sort;
     pub use crate::parser::parser;
     pub use sikula_macros::Search;
 }

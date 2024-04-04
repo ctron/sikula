@@ -72,10 +72,31 @@ impl From<Direction> for sea_orm::Order {
     }
 }
 
+/// Sorting indicator
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sort<'a> {
+    /// The qualifier to sort by
     pub qualifier: Qualifier<'a>,
+    /// The sorting direction
     pub direction: Direction,
+}
+
+impl<'a> Sort<'a> {
+    /// Create a new ascending sorting indicator
+    pub fn ascending(qualifier: Qualifier<'a>) -> Self {
+        Self {
+            qualifier,
+            direction: Direction::Ascending,
+        }
+    }
+
+    /// Create a new descending sorting indicator
+    pub fn descending(qualifier: Qualifier<'a>) -> Self {
+        Self {
+            qualifier,
+            direction: Direction::Descending,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
