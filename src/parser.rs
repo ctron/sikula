@@ -26,11 +26,11 @@ pub fn expression_string<'a>(
         .filter(|c: &char| {
             c.is_alphanumeric()
                 || match *c {
-                    // comparison
+                    // Comparison
                     '<' | '>' | '=' => true,
-                    // range
+                    // Range
                     '.' | '*' => true,
-                    // date
+                    // Date
                     '-' => true,
                     _ => false,
                 }
@@ -39,7 +39,7 @@ pub fn expression_string<'a>(
         .at_least(1)
         .to_slice()
         .map(|s: &str| s)
-        // filter out keywords in non-escaped values
+        // Filter out keywords in non-escaped values
         .filter(|ident| !matches!(*ident, "OR" | "AND" | "NOT"))
 }
 
@@ -73,17 +73,17 @@ pub fn term_match<'a>() -> impl Parser<'a, &'a str, Term<'a>, extra::Err<Simple<
                 .then(values()),
         )
         .map(|(invert, (tokens, values))| {
-            // check inversion
+            // Check inversion
             let invert = invert > 0;
 
-            // expand multi value case
+            // Expand multi value case
             let terms = values.into_iter().map(|value| {
-                // take base tokens and add value
+                // Take base tokens and add value
                 let tokens = tokens.iter().copied().chain([value]).collect();
                 Term::Match { invert, tokens }
             });
 
-            // multi value as "or" (or single)
+            // Multi value as "or" (or single)
             Term::or(terms)
         })
 }

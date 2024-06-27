@@ -229,7 +229,7 @@ impl<'a, S> Term<'a, S>
 where
     S: Search,
 {
-    /// convenience method creating a [`Term::Not`].
+    /// Convenience method creating a [`Term::Not`].
     ///
     /// In case a `not` is provided to this method, its value is used instead without wrapping
     /// another "not".
@@ -265,7 +265,7 @@ where
         }
     }
 
-    /// Returns true if there are no terms
+    /// Returns true if there are no terms.
     pub fn is_empty(&self) -> bool {
         match self {
             Self::And(terms) if terms.is_empty() => true,
@@ -404,7 +404,7 @@ impl<'p, S: Search> Context<'p, S> {
         }
     }
 
-    /// call the provided function for this, walking up the parent chain, calling it for every parent
+    /// Call the provided function for this, walking up the parent chain, calling it for every parent.
     pub fn walk_up<T, F>(&self, init: T, f: F) -> T
     where
         F: Fn(&Self, T) -> T,
@@ -421,9 +421,9 @@ impl<'p, S: Search> Context<'p, S> {
 /// Context information when transforming.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum QualifierContext {
-    /// part of a primary term (`<value>`)
+    /// Part of a primary term (`<value>`).
     Primary,
-    /// part of a qualifier term (`qualifier:<value>`)
+    /// Part of a qualifier term (`qualifier:<value>`).
     Qualifier,
 }
 
@@ -643,7 +643,7 @@ mod test {
         let child1 = ctx.push(vec![]);
         let child2 = child1.push(vec![vec!["child2".to_string()]]);
 
-        // we should only get the last defined (non-empty list)
+        // We should only get the last defined (non-empty list)
         assert_eq!(&ctx.scopes, &[vec!["default".to_string()]]);
         assert_eq!(&child1.scopes, &[vec!["default".to_string()]]);
         assert_eq!(&child2.scopes, &[vec!["child2".to_string()]]);

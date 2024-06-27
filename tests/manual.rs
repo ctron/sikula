@@ -3,17 +3,17 @@ use pretty_assertions::assert_eq;
 
 use sikula::{mir, prelude::*};
 
-/// same as [`ExampleResource`], but manually implemented
+/// Same as [`ExampleResource`], but manually implemented.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ManualResource<'a> {
-    /// Standard qualifier: `author:someone`
+    /// Standard qualifier: `author:someone`.
     Author(&'a str),
-    /// Default primary: `warranty`
+    /// Default primary: `warranty`.
     Subject(Primary<'a>),
-    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`
+    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`.
     Message(Primary<'a>),
 
-    /// Predicate: `is:read`
+    /// Predicate: `is:read`.
     Read,
 
     /// Numeric qualifier example:
@@ -87,7 +87,7 @@ impl<'r> Search for ManualResource<'r> {
             },
             mir::Expression::Simple(expression) => match qualifier.as_slice() {
                 [] => {
-                    // primary
+                    // Primary
                     let mut terms = vec![];
                     for scope in &context.scopes {
                         let expression = match scope {

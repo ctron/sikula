@@ -1,19 +1,19 @@
 use sikula::prelude::*;
 
-/// A resource implemented with the derive
+/// A resource implemented with the derive.
 #[derive(Search, Clone, Debug, PartialEq, Eq)]
 enum DeriveResource<'x> {
-    /// Standard qualifier: `author:someone`
+    /// Standard qualifier: `author:someone`.
     #[search(sort, scope)]
     Author(&'x str),
-    /// Default primary: `warranty`
+    /// Default primary: `warranty`.
     #[search(default)]
     Subject(Primary<'x>),
-    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`
+    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`.
     #[search(scope)]
     Message(Primary<'x>),
 
-    /// Predicate: `is:read`
+    /// Predicate: `is:read`.
     Read,
 
     /// Numeric qualifier example:
