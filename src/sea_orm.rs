@@ -32,7 +32,7 @@ where
     }
 }
 
-/// translate an `Ordered` value into a SeaORM condition.
+/// Translate an `Ordered` value into a SeaORM condition.
 pub fn translate_ordered<C, T>(column: C, value: Ordered<T>) -> Condition
 where
     C: ColumnTrait,

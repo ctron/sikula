@@ -29,17 +29,17 @@ use sikula::prelude::*;
 
 #[derive(Search, Clone, Debug, PartialEq, Eq)]
 enum DeriveResource<'a> {
-    /// Standard qualifier: `author:someone`
+    /// Standard qualifier: `author:someone`.
     #[search(sort, scope)]
     Author(&'a str),
-    /// Default primary: `warranty`
+    /// Default primary: `warranty`.
     #[search(default)]
     Subject(Primary<'a>),
-    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`
+    /// Non-default primary: `warranty in:message`, to search in both: `warranty in:message in:subject`.
     #[search(scope)]
     Message(Primary<'a>),
 
-    /// Predicate: `is:read`
+    /// Predicate: `is:read`.
     Read,
 
     /// Numeric qualifier example:
@@ -57,37 +57,37 @@ enum DeriveResource<'a> {
 }
 ```
 
-The `Query` derive provides the trait implementation. The `#[query(scope)]` attribute flags the variant `Subject`
-as `Body` scopes for the primary search terms, marking `Subject` as the default if none was selected.
+The `Search` derive provides the trait implementation. The `#[search(default)]` attribute flags the variant `Subject`
+as default scopes for the primary search terms, marking `Subject` as the default if none was selected.
 
 In general, there are three types of terms: Primary, Qualifiers, Predicates. Predicates are simple "is this condition
 true" style of filters. If an enum variant doesn't have any value, it is a predicate.
 
 Qualifiers are additional matching criteria, which depend on the type of the value.
 
-With the `#[query(sort)]` flag, a field can be used for sorting the result. 
+With the `#[search(sort)]` flag, a field can be used for sorting the result. 
 
 Now, you can do the following queries:
 
-| Query                                             | Retrieves all entries…                                                                            |
-|---------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| `foo`                                             | … containing "foo" in the "subject"                                                               |
-| `foo in:subject in:message`                       | … containing "foo" in either "subject" or "body"                                                  |
-| `foo in:subject in:message is:read`               | … containing "foo" in either "subject" or "body" being "read"                                     |
-| `foo bar`                                         | … containing "foo" and "bar" in the subject                                                       |
-| `size:>10000`                                     | … having a size greater than 10000                                                                |
-| `size:100..200`                                   | … having a size between 100 (inclusive) and 200 (exclusive)                                       |
-| `-is:read`                                        | … being "not read"                                                                                |
-| `foo sort:sent`                                   | … containing "foo" in the subject, sorted by "sent" ascending                                     | 
-| `foo -sort:sent`                                  | … containing "foo" in the subject, sorted by "sent" descending                                    |
-| `sender:"Max Mustermann"`                         | … having a sender of `Max Mustermann`                                                             |
-| `sender:"Max Mustermann" sender:"Eva Mustermann"` | … having a sender of `Max Mustermann` and `Eva Mustermann` (most likely no results will be found) |
-| `sender:"Max Mustermann","Eva Mustermann"`        | … having a sender of `Max Mustermann` or `Eva Mustermann`                                         |
-| `foo OR bar`                                      | … containing "foo" or "bar" in the "subject"                                                      |
-| `foo AND bar`                                     | … containing "foo" and "bar" in the "subject"                                                     |
-| `foo OR bar AND baz`                              | … containing either "foo" or ( "bar" and "baz" ) in the "subject"                                 |
-| `(foo OR bar) AND baz`                            | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                        |
-| `foo OR bar baz`                                  | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                        |
+| Query                                             | Retrieves all entries…                                                                                |
+|---------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| `foo`                                             | … containing "foo" in the "subject"                                                                   |
+| `foo in:subject in:message`                       | … containing "foo" in either "subject" or "message"                                                   |
+| `foo in:subject in:message is:read`               | … containing "foo" in either "subject" or "message" being "read"                                      |
+| `foo bar`                                         | … containing "foo" and "bar" in the "subject"                                                         |
+| `size:>10000`                                     | … having the "size" greater than 10000                                                                |
+| `size:100..200`                                   | … having the "size" between 100 (inclusive) and 200 (exclusive)                                       |
+| `-is:read`                                        | … being "not read"                                                                                    |
+| `foo sort:sent`                                   | … containing "foo" in the "subject", sorted by "sent" ascending                                       |
+| `foo -sort:sent`                                  | … containing "foo" in the "subject", sorted by "sent" descending                                      |
+| `author:"Max Mustermann"`                         | … having the "author" of `Max Mustermann`                                                             |
+| `author:"Max Mustermann" author:"Eva Mustermann"` | … having the "author" of `Max Mustermann` and `Eva Mustermann` (most likely no results will be found) |
+| `author:"Max Mustermann","Eva Mustermann"`        | … having the "author" of `Max Mustermann` or `Eva Mustermann`                                         |
+| `foo OR bar`                                      | … containing "foo" or "bar" in the "subject"                                                          |
+| `foo AND bar`                                     | … containing "foo" and "bar" in the "subject"                                                         |
+| `foo OR bar AND baz`                              | … containing either "foo" or ( "bar" and "baz" ) in the "subject"                                     |
+| `(foo OR bar) AND baz`                            | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                            |
+| `foo OR bar baz`                                  | … containing ( "foo" or "bar" ) and "baz" in the "subject"                                            |
 
 For testing more examples with the resource above, you can run the `cli` example:
 
@@ -99,6 +99,36 @@ Which will give you a structured output of the parsed query:
 
 ```
 Input: '-is:read AND foo'
+
+MIR:
+Query {
+    term: And {
+        scopes: [],
+        terms: [
+            Not(
+                Match {
+                    qualifier: Qualifier(
+                        [
+                            "read",
+                        ],
+                    ),
+                    expression: Predicate,
+                },
+            ),
+            Match {
+                qualifier: Qualifier(
+                    [],
+                ),
+                expression: Simple(
+                    "foo",
+                ),
+            },
+        ],
+    },
+    sorting: [],
+}
+
+LIR:
 Query {
     terms: And(
         [

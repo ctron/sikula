@@ -233,7 +233,7 @@ struct Scope {
 struct VariantOpts {
     sort: Flag,
     scope: Flag,
-    // default scope
+    // Default scope
     default: Flag,
 }
 
@@ -272,7 +272,7 @@ fn collect(data: &DataEnum) -> Info {
         let num_fields = variant.fields.len();
 
         if num_fields == 0 {
-            // predicate
+            // Predicate
             predicates.push(Predicate {
                 ident: variant.ident.clone(),
                 name,

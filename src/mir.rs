@@ -72,17 +72,17 @@ impl From<Direction> for sea_orm::Order {
     }
 }
 
-/// Sorting indicator
+/// Sorting indicator.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sort<'a> {
-    /// The qualifier to sort by
+    /// The qualifier to sort by.
     pub qualifier: Qualifier<'a>,
-    /// The sorting direction
+    /// The sorting direction.
     pub direction: Direction,
 }
 
 impl<'a> Sort<'a> {
-    /// Create a new ascending sorting indicator
+    /// Create a new ascending sorting indicator.
     pub fn ascending(qualifier: Qualifier<'a>) -> Self {
         Self {
             qualifier,
@@ -90,7 +90,7 @@ impl<'a> Sort<'a> {
         }
     }
 
-    /// Create a new descending sorting indicator
+    /// Create a new descending sorting indicator.
     pub fn descending(qualifier: Qualifier<'a>) -> Self {
         Self {
             qualifier,
@@ -141,11 +141,11 @@ impl<'a> Term<'a> {
 
     pub fn compact(self) -> Self {
         match self {
-            // if "or" has only one element an no scopes, return the single term
+            // If "or" has only one element an no scopes, return the single term
             Self::Or { scopes, mut terms } if scopes.is_empty() && terms.len() == 1 => {
                 terms.remove(0)
             }
-            // if "and" has only one element an no scopes, return the single term
+            // If "and" has only one element an no scopes, return the single term
             Self::And { scopes, mut terms } if scopes.is_empty() && terms.len() == 1 => {
                 terms.remove(0)
             }
@@ -155,9 +155,9 @@ impl<'a> Term<'a> {
 
     pub fn negate(self) -> Self {
         match self {
-            // if we are already applying "not", then negating just means removing that not
+            // If we are already applying "not", then negating just means removing that "not"
             Self::Not(term) => *term,
-            // otherwise, wrap with a not
+            // Otherwise, wrap with a "not"
             otherwise => Self::Not(Box::new(otherwise)),
         }
     }
@@ -184,7 +184,7 @@ impl<'a> Query<'a> {
     pub fn parse(query: hir::Query<'a>) -> Result<Self, Error> {
         let mut sorting = Vec::new();
 
-        // the root, defaults to "and"
+        // The root, defaults to "and"
         let mut scopes = vec![];
         let terms = Self::parse_term(&mut sorting, &mut scopes, &query.term);
 
@@ -234,7 +234,7 @@ impl<'a> Query<'a> {
     ) -> Vec<Term<'a>> {
         match terms.as_slice() {
             [] => {
-                // should not happen, skip
+                // Should not happen, skip
                 vec![]
             }
             ["in", qualifier @ ..] => {

@@ -79,27 +79,27 @@
 //! | `foo in:subject in:message`                       | … containing "foo" in either "subject" or "body"                                                  |
 //! | `foo in:subject in:message is:read`               | … containing "foo" in either "subject" or "body" being "read"                                     |
 //! | `foo bar`                                         | … containing "foo" and "bar" in the subject                                                       |
-//! | `size:>10000`                                     | … having a size greater than 10000                                                                |
-//! | `size:100..200`                                   | … having a size between 100 (inclusive) and 200 (exclusive)                                       |
+//! | `size:>10000`                                     | … having the "size" greater than 10000                                                            |
+//! | `size:100..200`                                   | … having the "size" between 100 (inclusive) and 200 (exclusive)                                   |
 //!
 //! See more examples in README.
 
-/// High-level intermediate representation
+/// High-level intermediate representation.
 #[doc(hidden)]
 pub mod hir;
-/// Low-level intermediate representation
+/// Low-level intermediate representation.
 pub mod lir;
 #[doc(hidden)]
-/// Mid-level intermediate representation
+/// Mid-level intermediate representation.
 pub mod mir;
-/// Basic parsing
+/// Basic parsing.
 pub mod parser;
 
 #[cfg(feature = "sea-orm")]
-/// Support for building SeaORM conditions
+/// Support for building SeaORM conditions.
 pub mod sea_orm;
 
-/// The prelude
+/// The prelude.
 pub mod prelude {
     pub use crate::lir::*;
     pub use crate::mir::Direction;

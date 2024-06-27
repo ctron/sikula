@@ -44,7 +44,7 @@ fn test_scopes() {
 
 #[test]
 fn test_scopes_2() {
-    // query "in" a scope, but not the default, the default must be gone then
+    // Query "in" a scope, but not the default, the default must be gone then
     let r = DeriveResource::parse(r#"bar foo in:message"#).unwrap();
 
     assert_eq!(
